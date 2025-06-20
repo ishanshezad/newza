@@ -7,7 +7,7 @@ import { supabase, type NewsArticle } from "../lib/supabase"
 import { BangladeshNewsAgent } from "../lib/bangladeshAgent"
 import { SourceRankingService } from "../lib/sourceRanking"
 import { UserPreferencesManager } from "../lib/userPreferences"
-import { Loader2, AlertCircle } from "lucide-react"
+import { Loader2, AlertCircle, Star } from "lucide-react"
 import { motion } from "framer-motion"
 
 interface NewsFeedProps {
@@ -35,27 +35,13 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
 
   const ITEMS_PER_PAGE = 10
 
-  const calculateArticlePriority = (article: NewsArticle): number => {
-    let score = 0
-    
-    // Base recency score (newer articles get higher base score)
-    const hoursOld = (Date.now() - new Date(article.published_date).getTime()) / (1000 * 60 * 60)
-    const recencyScore = Math.max(0, 100 - (hoursOld / 24) * 5) // Decrease by 5 points per day
-    score += recencyScore
-
-    // Apply source priority scoring
-    const sourceScore = SourceRankingService.calculateSourceScore(article.source, score)
-    
-    return Math.round(sourceScore)
-  }
-
   const fetchArticles = React.useCallback(async (pageNum: number, reset = false) => {
     try {
       setLoading(true)
       setError(null)
 
       // Fetch more articles than needed for proper sorting by source priority
-      const fetchLimit = Math.min((pageNum + 1) * ITEMS_PER_PAGE + 100, 300)
+      const fetchLimit = Math.min((pageNum + 1) * ITEMS_PER_PAGE + 200, 500)
 
       let query = supabase
         .from('news_articles')
@@ -84,10 +70,13 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
 
       let newArticles = data || []
       
-      // Calculate priority scores and add source tier information
-      const articlesWithPriority = newArticles.map(article => {
-        const priorityScore = calculateArticlePriority(article)
+      // Apply aggressive source prioritization
+      const prioritizedArticles = SourceRankingService.prioritizeArticlesBySource(newArticles)
+      
+      // Add source tier information and priority scores
+      const articlesWithMetadata = prioritizedArticles.map(article => {
         const sourcePriority = SourceRankingService.getSourcePriority(article.source)
+        const priorityScore = SourceRankingService.calculateFeedPriority(article)
         
         return {
           ...article,
@@ -96,35 +85,26 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
         }
       })
 
-      // Sort by priority score (highest first), then by published date (newest first)
-      const sortedArticles = articlesWithPriority.sort((a, b) => {
-        // Primary sort: Priority score (higher is better)
-        if (a.priority_score !== b.priority_score) {
-          return (b.priority_score || 0) - (a.priority_score || 0)
-        }
-        // Secondary sort: Published date (newer is better)
-        return new Date(b.published_date).getTime() - new Date(a.published_date).getTime()
-      })
-
-      // Apply Bangladesh prioritization for "Today" category (after source prioritization)
-      let finalArticles = sortedArticles
+      // Apply Bangladesh prioritization for "Today" category (as secondary factor)
+      let finalArticles = articlesWithMetadata
       if (category === "Today" && !searchQuery) {
-        // For "Today" category, apply Bangladesh relevance as a secondary factor
-        finalArticles = sortedArticles.sort((a, b) => {
-          const sourcePriorityA = SourceRankingService.getSourcePriority(a.source).priority
-          const sourcePriorityB = SourceRankingService.getSourcePriority(b.source).priority
-          
-          // If same source tier, then apply Bangladesh relevance
-          if (Math.abs(sourcePriorityA - sourcePriorityB) < 20) {
-            const bangladeshScoreA = BangladeshNewsAgent.calculateBangladeshRelevanceScore(a)
-            const bangladeshScoreB = BangladeshNewsAgent.calculateBangladeshRelevanceScore(b)
-            
-            if (bangladeshScoreA !== bangladeshScoreB) {
-              return bangladeshScoreB - bangladeshScoreA
-            }
+        // For "Today" category, apply Bangladesh relevance as a secondary factor within same source tier
+        finalArticles = articlesWithMetadata.sort((a, b) => {
+          // Primary: Source tier (tier1 always first)
+          if (a.source_tier !== b.source_tier) {
+            const tierOrder = { tier1: 3, tier2: 2, tier3: 1 }
+            return tierOrder[b.source_tier as keyof typeof tierOrder] - tierOrder[a.source_tier as keyof typeof tierOrder]
           }
           
-          // Otherwise maintain priority score order
+          // Secondary: Within same tier, apply Bangladesh relevance
+          const bangladeshScoreA = BangladeshNewsAgent.calculateBangladeshRelevanceScore(a)
+          const bangladeshScoreB = BangladeshNewsAgent.calculateBangladeshRelevanceScore(b)
+          
+          if (Math.abs(bangladeshScoreA - bangladeshScoreB) > 10) {
+            return bangladeshScoreB - bangladeshScoreA
+          }
+          
+          // Tertiary: Priority score
           return (b.priority_score || 0) - (a.priority_score || 0)
         })
       }
@@ -232,10 +212,16 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
       {/* Articles Grid */}
       <div className="space-y-4">
         {articles.map((article, index) => {
+          const isTopSource = SourceRankingService.isTopPrioritySource(article.source)
+          const sourceTierBadge = SourceRankingService.getSourceTierBadge(article.source)
+          
           return (
             <div key={article.id} className="relative">
               <NewsCard
-                article={article}
+                article={{
+                  ...article,
+                  source_tier: article.source_tier
+                }}
                 onClick={handleArticleClick}
                 onPreferenceChange={handlePreferenceChange}
                 index={index}
@@ -279,7 +265,10 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
           animate={{ opacity: 1 }}
           className="text-center py-8 text-muted-foreground"
         >
-          No more articles to load
+          <div className="flex items-center justify-center gap-2">
+            <Star className="h-4 w-4" />
+            <span>All articles loaded • Prioritized by source quality and relevance</span>
+          </div>
         </motion.div>
       )}
     </div>

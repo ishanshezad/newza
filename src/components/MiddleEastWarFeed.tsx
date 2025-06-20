@@ -5,7 +5,7 @@ import { Timeline } from "./ui/Timeline"
 import { LoadingSkeleton } from "./ui/LoadingSkeleton"
 import { supabase, type MiddleEastWarArticle } from "../lib/middleEastWarSupabase"
 import { SourceRankingService } from "../lib/sourceRanking"
-import { Loader2, AlertCircle, Clock } from "lucide-react"
+import { Loader2, AlertCircle, Clock, Star } from "lucide-react"
 import { motion } from "framer-motion"
 
 interface MiddleEastWarFeedProps {
@@ -60,8 +60,13 @@ export function MiddleEastWarFeed({ searchQuery = "", selectedTags = [] }: Middl
     const recencyScore = Math.max(0, 100 - (hoursOld / 24) * 10) // Decrease by 10 points per day
     score += recencyScore
 
-    // Apply source priority scoring (MAJOR BOOST for popular sources)
-    const sourceScore = SourceRankingService.calculateSourceScore(article.source, score)
+    // Apply aggressive source priority scoring (MAJOR BOOST for popular sources)
+    const sourceScore = SourceRankingService.calculateFeedPriority({
+      source: article.source,
+      published_date: article.published_date,
+      title: article.title,
+      description: article.description
+    })
     score = sourceScore
 
     // Keyword matching with weighted scores
@@ -135,7 +140,7 @@ export function MiddleEastWarFeed({ searchQuery = "", selectedTags = [] }: Middl
       setTotalArticles(count || 0)
 
       // Fetch more articles than needed for proper sorting by source priority
-      const fetchLimit = Math.min((pageNum + 1) * ITEMS_PER_PAGE + 100, 400)
+      const fetchLimit = Math.min((pageNum + 1) * ITEMS_PER_PAGE + 200, 600)
 
       // Fetch articles with tag assignments for priority calculation
       let query = supabase
@@ -179,7 +184,7 @@ export function MiddleEastWarFeed({ searchQuery = "", selectedTags = [] }: Middl
 
       if (fetchError) throw fetchError
 
-      // Calculate priority scores and sort with source priority emphasis
+      // Calculate priority scores and apply aggressive source prioritization
       const articlesWithPriority = (data || []).map(article => {
         const tagAssignments = article.middleeastwar_tag_assignments || []
         const priorityScore = calculatePriorityScore(article, tagAssignments)
@@ -199,17 +204,15 @@ export function MiddleEastWarFeed({ searchQuery = "", selectedTags = [] }: Middl
         }
       })
 
-      // Sort by priority score (highest first), with heavy emphasis on source priority
+      // Sort with aggressive source priority emphasis
       const sortedArticles = articlesWithPriority.sort((a, b) => {
-        const sourcePriorityA = SourceRankingService.getSourcePriority(a.source).priority
-        const sourcePriorityB = SourceRankingService.getSourcePriority(b.source).priority
-        
-        // Primary sort: Source priority (popular sources first)
-        if (Math.abs(sourcePriorityA - sourcePriorityB) > 15) {
-          return sourcePriorityB - sourcePriorityA
+        // Primary sort: Source tier (tier1 always comes first)
+        if (a.source_tier !== b.source_tier) {
+          const tierOrder = { tier1: 3, tier2: 2, tier3: 1 }
+          return tierOrder[b.source_tier as keyof typeof tierOrder] - tierOrder[a.source_tier as keyof typeof tierOrder]
         }
         
-        // Secondary sort: Priority score (content relevance)
+        // Secondary sort: Priority score (content relevance) within same tier
         if (a.priority_score !== b.priority_score) {
           return (b.priority_score || 0) - (a.priority_score || 0)
         }
@@ -329,7 +332,7 @@ export function MiddleEastWarFeed({ searchQuery = "", selectedTags = [] }: Middl
 
             const isHighPriority = (article.priority_score || 0) > 150
             const sourceTierBadge = SourceRankingService.getSourceTierBadge(article.source)
-            const isPopularSource = article.source_tier === 'tier1'
+            const isTopSource = SourceRankingService.isTopPrioritySource(article.source)
 
             return (
               <EnhancedNewsCard
@@ -343,12 +346,12 @@ export function MiddleEastWarFeed({ searchQuery = "", selectedTags = [] }: Middl
                 onClick={() => handleArticleClick(article)}
                 className={`
                   ${isHighPriority ? 'border-red-500/30 bg-red-500/5' : ''}
-                  ${isPopularSource ? 'border-l-blue-500 shadow-md' : ''}
+                  ${isTopSource ? 'border-l-blue-500 shadow-md' : ''}
                 `}
                 index={index}
               >
-                {/* Source Tier Badge */}
-                {isPopularSource && (
+                {/* Source Tier Badge for Top Sources */}
+                {isTopSource && (
                   <div className="mb-2">
                     <span
                       className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
@@ -357,7 +360,8 @@ export function MiddleEastWarFeed({ searchQuery = "", selectedTags = [] }: Middl
                         color: sourceTierBadge.color 
                       }}
                     >
-                      ⭐ {sourceTierBadge.label} Source
+                      <Star className="h-3 w-3 mr-1" />
+                      {sourceTierBadge.label} Source
                     </span>
                   </div>
                 )}
@@ -464,7 +468,7 @@ export function MiddleEastWarFeed({ searchQuery = "", selectedTags = [] }: Middl
           className="text-center py-8 text-muted-foreground"
         >
           <div className="flex items-center justify-center gap-2">
-            <Clock className="h-4 w-4" />
+            <Star className="h-4 w-4" />
             <span>All articles loaded • Prioritized by source quality and relevance</span>
           </div>
         </motion.div>
