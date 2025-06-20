@@ -34,6 +34,8 @@ export type BreakingNewsAlert = {
   severity: 'critical' | 'high' | 'medium' | 'low'
   sent_at: string
   created_at: string
+  // Joined breaking news data
+  breaking_news?: BreakingNews
 }
 
 export type BreakingNewsSource = {
