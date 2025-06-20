@@ -72,7 +72,7 @@ export function BreakingNewsSection({
 
   if (loading && breakingNews.length === 0) {
     return (
-      <div className={`space-y-3 ${className}`}>
+      <div className={\`space-y-3 ${className}`}>
         {Array.from({ length: 2 }).map((_, index) => (
           <div key={index} className="animate-pulse">
             <div className="bg-card border border-border border-l-4 border-l-red-500 rounded-lg overflow-hidden shadow-sm flex flex-col sm:flex-row relative">
@@ -104,7 +104,7 @@ export function BreakingNewsSection({
   }
 
   return (
-    <div className={`space-y-3 ${className}`}>
+    <div className={\`space-y-3 ${className}`}>
       <div className="mb-4">
         <h2 className="text-lg font-bold text-red-600 dark:text-red-400 mb-2">BREAKING NEWS</h2>
       </div>
