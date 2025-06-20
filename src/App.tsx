@@ -3,7 +3,6 @@ import { Toaster } from 'react-hot-toast'
 import { TikTokHeader } from './components/ui/TikTokHeader'
 import { NewsFeed } from './components/NewsFeed'
 import { MiddleEastWarFeed } from './components/MiddleEastWarFeed'
-import { BreakingNewsMonitor } from './components/BreakingNewsMonitor'
 import { WarDashboard } from './components/ui/WarDashboard'
 import { SplashScreens } from './components/SplashScreen'
 import { useDebounce } from './hooks/useDebounce'
@@ -123,11 +122,6 @@ function App() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Breaking News Monitor - Fixed position */}
-      <div className="fixed bottom-6 right-6 z-30">
-        <BreakingNewsMonitor />
-      </div>
 
       {/* War Dashboard */}
       <WarDashboard
