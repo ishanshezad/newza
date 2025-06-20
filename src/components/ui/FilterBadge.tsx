@@ -4,13 +4,13 @@ import { X } from "lucide-react"
 import { cn } from "../../lib/utils"
 
 const filterBadgeVariants = cva(
-  "inline-flex items-center bg-background text-sm text-muted-foreground border transition-colors",
+  "inline-flex items-center bg-background text-tremor-label text-muted-foreground border transition-colors",
   {
     variants: {
       variant: {
-        default: "rounded-md gap-x-2 py-1 pl-3 pr-1",
-        pill: "rounded-full gap-x-2 py-1 pl-3 pr-1",
-        avatar: "rounded-full gap-2 px-1 py-1",
+        default: "rounded-tremor-small gap-x-2.5 py-1 pl-2.5 pr-1",
+        pill: "rounded-tremor-full gap-x-2.5 py-1 pl-2.5 pr-1",
+        avatar: "rounded-tremor-full gap-2 px-1 py-1",
       },
     },
     defaultVariants: {
@@ -44,7 +44,7 @@ export function FilterBadge({
       <span className={cn(filterBadgeVariants({ variant }), className)} {...props}>
         {avatar && (
           <img
-            className="inline-block size-5 rounded-full"
+            className="inline-block size-5 rounded-tremor-full"
             src={avatar}
             alt=""
           />
@@ -54,10 +54,10 @@ export function FilterBadge({
           <button
             type="button"
             onClick={onRemove}
-            className="flex size-5 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="flex size-5 items-center justify-center rounded-tremor-full text-muted-foreground hover:bg-muted hover:text-foreground"
             aria-label="Remove"
           >
-            <X className="size-3 shrink-0" />
+            <X className="size-4 shrink-0" aria-hidden={true} />
           </button>
         )}
       </span>
@@ -80,12 +80,12 @@ export function FilterBadge({
           type="button"
           onClick={onRemove}
           className={cn(
-            "-ml-1 flex size-5 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground",
-            variant === "pill" ? "rounded-full" : "rounded"
+            "-ml-1.5 flex size-5 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground",
+            variant === "pill" ? "rounded-tremor-full" : "rounded"
           )}
           aria-label="Remove"
         >
-          <X className="size-3 shrink-0" />
+          <X className="size-4 shrink-0" aria-hidden={true} />
         </button>
       )}
     </span>

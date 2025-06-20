@@ -56,6 +56,13 @@ export function OptimizedRecommendationsSection({
     setShowTooltip(showTooltip === articleId ? null : articleId)
   }
 
+  const handlePreferenceChange = (articleId: string, isLiked: boolean) => {
+    // Trigger recommendations refresh when preferences change
+    if (isLiked) {
+      setTimeout(() => refreshRecommendations(), 100)
+    }
+  }
+
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Loading State */}
@@ -162,7 +169,8 @@ export function OptimizedRecommendationsSection({
                   <NewsCard
                     article={recommendation}
                     onClick={onArticleClick}
-                    showThumbsUp={false}
+                    showSuggestMore={false}
+                    onPreferenceChange={handlePreferenceChange}
                   />
                 </motion.div>
               )

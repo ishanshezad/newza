@@ -37,6 +37,13 @@ export function RecommendationsSection({
   // Show notification bar when there's an error (failed to load recommendations)
   const showNotificationBar = !!error && !loading
 
+  const handlePreferenceChange = (articleId: string, isLiked: boolean) => {
+    // Trigger recommendations refresh when preferences change
+    if (isLiked) {
+      setTimeout(() => refreshRecommendations(), 100)
+    }
+  }
+
   return (
     <>
       {/* Notification Bar for failed recommendations */}
@@ -122,7 +129,7 @@ export function RecommendationsSection({
                   >
                     {/* Recommendation Badge */}
                     <div className="absolute top-2 left-2 z-10">
-                      <div className="bg-gradient-to-r from-white-500 to-blue-500 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                      <div className="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1">
                         <TrendingUp className="h-3 w-3" />
                         <span>Suggested</span>
                         {score && score.score > 50 && (
@@ -166,6 +173,7 @@ export function RecommendationsSection({
                     <NewsCard
                       article={article}
                       onClick={onArticleClick}
+                      onPreferenceChange={handlePreferenceChange}
                     />
                   </motion.div>
                 )
