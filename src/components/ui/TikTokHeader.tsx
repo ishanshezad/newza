@@ -71,11 +71,34 @@ export function TikTokHeader({
     setLocalSearchValue(searchValue)
   }, [searchValue])
 
-  // Auto-center active category with smooth animation
+  // Set initial scroll position for "Today" to be centered using the middle set
   React.useEffect(() => {
-    if (activeCategory && categoriesRef.current && categoryRefs.current.length > 0) {
-      const categoryIndex = categories.indexOf(activeCategory)
-      const categoryElement = categoryRefs.current[categoryIndex]
+    const todayIndex = categories.indexOf("Today");
+    if (todayIndex !== -1) {
+      const middleIndex = todayIndex + categories.length; // Use middle set
+      const categoryElement = categoryRefs.current[middleIndex];
+      const containerElement = categoriesRef.current;
+
+      if (categoryElement && containerElement) {
+        const containerWidth = containerElement.offsetWidth;
+        const categoryLeft = categoryElement.offsetLeft;
+        const categoryWidth = categoryElement.offsetWidth;
+        const containerCenter = containerWidth / 2;
+        const categoryCenter = categoryLeft + categoryWidth / 2;
+
+        const initialScrollOffset = containerCenter - categoryCenter;
+        setScrollOffset(initialScrollOffset);
+      }
+    }
+  }, [categories]);
+
+  const handleCategoryClick = (category: string) => {
+    if (category !== activeCategory && !isTransitioning) {
+      // Find the middle occurrence of the category for circular navigation
+      const totalCategories = categories.length
+      const categoryIndex = categories.indexOf(category)
+      const middleIndex = categoryIndex + totalCategories // Use the middle set for positioning
+      const categoryElement = categoryRefs.current[middleIndex]
       const containerElement = categoriesRef.current
 
       if (categoryElement && containerElement) {
@@ -86,13 +109,11 @@ export function TikTokHeader({
         const categoryCenter = categoryLeft + categoryWidth / 2
 
         const newScrollOffset = containerCenter - categoryCenter
+        
+        // Smooth transition to new position
         setScrollOffset(newScrollOffset)
       }
-    }
-  }, [activeCategory, categories])
 
-  const handleCategoryClick = (category: string) => {
-    if (category !== activeCategory && !isTransitioning) {
       debouncedCategorySelect(category)
     }
   }
@@ -110,7 +131,7 @@ export function TikTokHeader({
 
   return (
     <MotionConfig transition={transition}>
-      <div className="sticky top-0 z-50 bg-background"> {/* Removed border */}
+      <div className="sticky top-0 z-50 bg-background">
         <div className="relative" ref={containerRef}>
           <motion.div
             className="flex items-center justify-between px-4 py-3"
@@ -136,14 +157,16 @@ export function TikTokHeader({
                   animate={{ x: scrollOffset }}
                   transition={{ 
                     type: "spring", 
-                    damping: 20, 
-                    stiffness: 300,
+                    damping: 25, 
+                    stiffness: 400,
+                    mass: 0.8,
                     duration: 0.6
                   }}
                 >
-                  {categories.map((category, index) => (
+                  {/* Render categories in a circular fashion - triple the array for seamless looping */}
+                  {categories.concat(categories, categories).map((category, index) => (
                     <button
-                      key={category}
+                      key={`${category}-${index}`}
                       ref={el => categoryRefs.current[index] = el}
                       onClick={() => handleCategoryClick(category)}
                       disabled={isTransitioning}

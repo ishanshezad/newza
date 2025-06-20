@@ -14,7 +14,8 @@ interface EnhancedNewsCardProps {
   onSuggestMoreClick?: () => void
   className?: string
   children?: React.ReactNode
-  index?: number // For staggered animations
+  index?: number
+  isBreakingNews?: boolean
 }
 
 export const EnhancedNewsCard: React.FC<EnhancedNewsCardProps> = ({ 
@@ -28,7 +29,8 @@ export const EnhancedNewsCard: React.FC<EnhancedNewsCardProps> = ({
   onSuggestMoreClick,
   className = "",
   children,
-  index = 0
+  index = 0,
+  isBreakingNews = false
 }) => {
   const [isClicked, setIsClicked] = React.useState(false)
 
@@ -39,18 +41,18 @@ export const EnhancedNewsCard: React.FC<EnhancedNewsCardProps> = ({
     // Call the preference change callback
     onSuggestMoreClick?.()
     
-    setTimeout(() => {
-      setIsClicked(false)
-    }, 600)
+    // Don't reset - keep it purple permanently
   }
 
   return (
     <div 
       className={cn(
-        "bg-card border border-border border-l-4 border-l-[var(--card-border-color)] rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col sm:flex-row relative cursor-pointer",
+        "bg-card border border-border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex relative cursor-pointer",
+        isBreakingNews ? "flex-col w-64 flex-shrink-0" : "flex-col sm:flex-row",
+        isBreakingNews ? "border-l-4 border-l-red-600" : "border-l-4 border-l-[var(--card-border-color)]",
         className
       )}
-      style={{ '--card-border-color': '#800000' } as React.CSSProperties} // Maroon color
+      style={{ '--card-border-color': '#800000' } as React.CSSProperties}
       onClick={onClick}
     >
       {/* Suggest More Button (Sparkles) */}
@@ -97,7 +99,10 @@ export const EnhancedNewsCard: React.FC<EnhancedNewsCardProps> = ({
       )}
 
       {/* Image Preview */}
-      <div className="w-full sm:w-1/3 h-32 sm:h-auto bg-gradient-to-br from-slate-200 to-slate-300 relative flex-shrink-0">
+      <div className={cn(
+        "w-full relative flex-shrink-0 bg-gradient-to-br from-slate-200 to-slate-300",
+        isBreakingNews ? "h-32" : "sm:w-1/3 h-32 sm:h-auto"
+      )}>
         <img
           src={imageSrc || "https://picsum.photos/400/200?random=1"}
           alt={title}
@@ -125,11 +130,12 @@ export const EnhancedNewsCard: React.FC<EnhancedNewsCardProps> = ({
             </p>
           )}
         </div>
+        
         <div className="flex justify-between items-center mt-auto">
-          <span className="text-xs text-muted-foreground font-medium">
+          <span className="text-xs text-muted-foreground font-medium truncate mr-2">
             {source}
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             {uploadTime && (
               <div className="flex items-center gap-1">
                 <Clock className="h-3 w-3 text-muted-foreground" />

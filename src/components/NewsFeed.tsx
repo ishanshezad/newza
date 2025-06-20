@@ -7,8 +7,10 @@ import { supabase, type NewsArticle } from "../lib/supabase"
 import { BangladeshNewsAgent } from "../lib/bangladeshAgent"
 import { SourceRankingService } from "../lib/sourceRanking"
 import { UserPreferencesManager } from "../lib/userPreferences"
-import { Loader2, AlertCircle, Star } from "lucide-react"
-import { motion } from "framer-motion"
+import { Loader2, AlertCircle, Star, TrendingUp, Users, MapPin } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { EnhancedNewsCard } from "./ui/EnhancedNewsCard"
+import { formatTimeAgo } from "../lib/utils"
 
 interface NewsFeedProps {
   category?: string
@@ -20,6 +22,38 @@ interface EnhancedNewsArticle extends NewsArticle {
   priority_score?: number
   source_tier?: string
 }
+
+// Mock breaking news data for horizontal feed
+const breakingNewsData = [
+  {
+    title: "New AI breakthrough in medical diagnostics",
+    description: "Researchers announce a significant leap in AI's ability to detect early signs of disease.",
+    imageSrc: "https://picsum.photos/400/200?random=100",
+    source: "Tech Today",
+    uploadTime: "15m ago"
+  },
+  {
+    title: "Global markets react to central bank decision",
+    description: "Unexpected interest rate hike sends ripples across stock exchanges worldwide.",
+    imageSrc: "https://picsum.photos/400/200?random=101",
+    source: "Financial Times",
+    uploadTime: "30m ago"
+  },
+  {
+    title: "Rare celestial event visible tonight",
+    description: "Astronomers advise stargazers to prepare for a once-in-a-lifetime meteor shower.",
+    imageSrc: "https://picsum.photos/400/200?random=102",
+    source: "Space.com",
+    uploadTime: "1h ago"
+  },
+  {
+    title: "Local elections see record voter turnout",
+    description: "Early results indicate a significant shift in political landscape.",
+    imageSrc: "https://picsum.photos/400/200?random=103",
+    source: "Local Gazette",
+    uploadTime: "2h ago"
+  },
+]
 
 export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsFeedProps) {
   const [articles, setArticles] = React.useState<EnhancedNewsArticle[]>([])
@@ -199,6 +233,31 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
 
   return (
     <div className="space-y-6">
+      {/* Horizontal Breaking News Feed */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="mb-6"
+      >
+        <h2 className="text-lg font-semibold mb-3 text-foreground">Breaking News</h2>
+        <div className="flex overflow-x-auto space-x-4 pb-2 scrollbar-hide">
+          {breakingNewsData.map((article, i) => (
+            <EnhancedNewsCard
+              key={`breaking-${i}`}
+              imageSrc={article.imageSrc}
+              title={article.title}
+              description={article.description}
+              source={article.source}
+              uploadTime={article.uploadTime}
+              showSuggestMore={true}
+              isBreakingNews={true}
+              onClick={() => console.log('Breaking news clicked:', article.title)}
+            />
+          ))}
+        </div>
+      </motion.div>
+
       {/* Optimized Recommendations Section - Show after first few articles */}
       {articles.length >= 3 && (
         <OptimizedRecommendationsSection
@@ -209,11 +268,10 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
         />
       )}
 
-      {/* Articles Grid */}
+      {/* Vertical News Feed */}
       <div className="space-y-4">
         {articles.map((article, index) => {
           const isTopSource = SourceRankingService.isTopPrioritySource(article.source)
-          const sourceTierBadge = SourceRankingService.getSourceTierBadge(article.source)
           
           return (
             <div key={article.id} className="relative">

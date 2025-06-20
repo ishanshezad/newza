@@ -5,8 +5,9 @@ import { Timeline } from "./ui/Timeline"
 import { LoadingSkeleton } from "./ui/LoadingSkeleton"
 import { supabase, type MiddleEastWarArticle } from "../lib/middleEastWarSupabase"
 import { SourceRankingService } from "../lib/sourceRanking"
-import { Loader2, AlertCircle, Clock, Star } from "lucide-react"
+import { Loader2, AlertCircle, Clock, Star, AlertTriangle, TrendingUp, Users, MapPin } from "lucide-react"
 import { motion } from "framer-motion"
+import { formatTimeAgo } from "../lib/utils"
 
 interface MiddleEastWarFeedProps {
   searchQuery?: string
@@ -266,24 +267,6 @@ export function MiddleEastWarFeed({ searchQuery = "", selectedTags = [] }: Middl
     window.open(article.article_url, '_blank', 'noopener,noreferrer')
   }
 
-  const formatTimeAgo = (dateString: string): string => {
-    const now = new Date()
-    const publishedDate = new Date(dateString)
-    const diffInMinutes = Math.floor((now.getTime() - publishedDate.getTime()) / (1000 * 60))
-    
-    if (diffInMinutes < 1) return 'Just now'
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`
-    
-    const diffInHours = Math.floor(diffInMinutes / 60)
-    if (diffInHours < 24) return `${diffInHours}h ago`
-    
-    const diffInDays = Math.floor(diffInHours / 24)
-    if (diffInDays < 7) return `${diffInDays}d ago`
-    
-    const diffInWeeks = Math.floor(diffInDays / 7)
-    return `${diffInWeeks}w ago`
-  }
-
   // Group articles by date for timeline view
   const groupArticlesByDate = (articles: EnhancedMiddleEastWarArticle[]): TimelineEntry[] => {
     const grouped: { [key: string]: EnhancedMiddleEastWarArticle[] } = {}
@@ -423,6 +406,69 @@ export function MiddleEastWarFeed({ searchQuery = "", selectedTags = [] }: Middl
 
   return (
     <div className="space-y-6">
+      {/* Latest Developments */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="mx-4 mb-3"
+      >
+        <h2 className="text-lg font-semibold mb-3 text-foreground">Latest Developments</h2>
+        <div className="flex overflow-x-auto space-x-4 pb-2 scrollbar-hide">
+          <div className="flex-shrink-0 w-72 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <h3 className="font-semibold text-red-800 dark:text-red-200 text-sm">CEASEFIRE TALKS</h3>
+                <p className="text-red-700 dark:text-red-300 text-sm mt-1">
+                  Negotiations have resumed with international mediators present. Both sides report cautious optimism.
+                </p>
+                <span className="text-xs text-red-600 dark:text-red-400">2 minutes ago</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex-shrink-0 w-72 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <Users className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <h3 className="font-semibold text-orange-800 dark:text-orange-200 text-sm">HUMANITARIAN AID</h3>
+                <p className="text-orange-700 dark:text-orange-300 text-sm mt-1">
+                  New convoy reaches affected areas with medical supplies and food assistance.
+                </p>
+                <span className="text-xs text-orange-600 dark:text-orange-400">15 minutes ago</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex-shrink-0 w-72 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <h3 className="font-semibold text-blue-800 dark:text-blue-200 text-sm">BORDER UPDATE</h3>
+                <p className="text-blue-700 dark:text-blue-300 text-sm mt-1">
+                  International observers report reduced military activity along disputed borders.
+                </p>
+                <span className="text-xs text-blue-600 dark:text-blue-400">32 minutes ago</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex-shrink-0 w-72 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <TrendingUp className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <h3 className="font-semibold text-green-800 dark:text-green-200 text-sm">DIPLOMATIC PROGRESS</h3>
+                <p className="text-green-700 dark:text-green-300 text-sm mt-1">
+                  Regional leaders express support for ongoing peace initiatives and dialogue.
+                </p>
+                <span className="text-xs text-green-600 dark:text-green-400">1 hour ago</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+
       {/* Timeline View */}
       <Timeline data={timelineData} />
       

@@ -1,13 +1,13 @@
 import React, { useState } from 'react'
 import { Toaster } from 'react-hot-toast'
+import { motion, AnimatePresence } from 'framer-motion'
+import { BarChart3 } from 'lucide-react'
 import { TikTokHeader } from './components/ui/TikTokHeader'
 import { NewsFeed } from './components/NewsFeed'
 import { MiddleEastWarFeed } from './components/MiddleEastWarFeed'
 import { WarDashboard } from './components/ui/WarDashboard'
 import { SplashScreens } from './components/SplashScreen'
 import { useDebounce } from './hooks/useDebounce'
-import { BarChart3 } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
 import './index.css'
 
 const categories = [
@@ -24,10 +24,8 @@ const categories = [
 
 function App() {
   const [showSplash, setShowSplash] = useState(true)
-  const [splashType, setSplashType] = useState(1)
   const [activeCategory, setActiveCategory] = useState("Today")
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedMiddleEastTags, setSelectedMiddleEastTags] = useState<string[]>([])
   const [isDashboardOpen, setIsDashboardOpen] = useState(false)
   const debouncedSearchQuery = useDebounce(searchQuery, 300)
 
@@ -38,7 +36,6 @@ function App() {
   const handleCategorySelect = (category: string) => {
     setActiveCategory(category)
     setSearchQuery("") // Clear search when changing category
-    setSelectedMiddleEastTags([]) // Clear Middle East tags when changing category
   }
 
   const handleSearch = (query: string) => {
@@ -80,7 +77,7 @@ function App() {
             <div>
               <MiddleEastWarFeed
                 searchQuery={debouncedSearchQuery}
-                selectedTags={selectedMiddleEastTags}
+                selectedTags={[]}
               />
             </div>
           ) : (
