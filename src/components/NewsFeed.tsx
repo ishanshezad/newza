@@ -52,7 +52,7 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
 
   const ITEMS_PER_PAGE = 10
 
-  // Fetch breaking news for "Today" category
+  // Fetch breaking news for "Today" category - only from top-tier sources
   const fetchBreakingNews = React.useCallback(async () => {
     if (category !== "Today") {
       setBreakingNews([])
@@ -63,6 +63,9 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
     try {
       setBreakingNewsLoading(true)
       
+      // Get top-tier sources for filtering
+      const topTierSources = SourceRankingService.getTopPrioritySources()
+      
       const { data, error } = await supabase
         .from('breaking_news')
         .select('*')
@@ -70,11 +73,35 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
         .gt('expires_at', new Date().toISOString())
         .order('urgency_score', { ascending: false })
         .order('detected_at', { ascending: false })
-        .limit(6)
+        .limit(20) // Fetch more to filter by source quality
 
       if (error) throw error
 
-      setBreakingNews(data || [])
+      // Filter to only include breaking news from top-tier sources
+      const filteredBreakingNews = (data || []).filter(item => {
+        const sourcePriority = SourceRankingService.getSourcePriority(item.source)
+        return sourcePriority.category === 'tier1' || 
+               topTierSources.some(topSource => 
+                 item.source.toLowerCase().includes(topSource.toLowerCase())
+               )
+      })
+
+      // Sort by priority level and urgency score
+      const sortedBreakingNews = filteredBreakingNews.sort((a, b) => {
+        // Priority level order: critical > high > medium
+        const priorityOrder = { critical: 3, high: 2, medium: 1 }
+        const priorityA = priorityOrder[a.priority_level as keyof typeof priorityOrder] || 0
+        const priorityB = priorityOrder[b.priority_level as keyof typeof priorityOrder] || 0
+        
+        if (priorityA !== priorityB) {
+          return priorityB - priorityA
+        }
+        
+        // Then by urgency score
+        return b.urgency_score - a.urgency_score
+      })
+
+      setBreakingNews(sortedBreakingNews.slice(0, 6)) // Limit to 6 top items
     } catch (err) {
       console.error('Failed to fetch breaking news:', err)
       setBreakingNews([])
@@ -248,7 +275,7 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
 
   return (
     <div className="space-y-6">
-      {/* Breaking News Section - Only show for "Today" category */}
+      {/* Breaking News Section - Only show for "Today" category with top-tier sources */}
       {category === "Today" && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -256,7 +283,12 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
           transition={{ delay: 0.1 }}
           className="mb-6"
         >
-          <h2 className="text-lg font-semibold mb-3 text-foreground">Breaking News</h2>
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="text-lg font-semibold text-foreground">Breaking News</h2>
+            <span className="text-xs bg-red-500/20 text-red-600 px-2 py-1 rounded-full font-medium">
+              Top Sources Only
+            </span>
+          </div>
           
           {breakingNewsLoading ? (
             <div className="flex overflow-x-auto space-x-4 pb-2 scrollbar-hide">
@@ -268,28 +300,54 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
             </div>
           ) : breakingNews.length > 0 ? (
             <div className="flex overflow-x-auto space-x-4 pb-2 scrollbar-hide">
-              {breakingNews.map((item) => (
-                <EnhancedNewsCard
-                  key={item.id}
-                  imageSrc={item.image_url}
-                  title={item.title}
-                  description={item.description}
-                  source={item.source}
-                  uploadTime={formatTimeAgo(item.detected_at)}
-                  showSuggestMore={true}
-                  isBreakingNews={true}
-                  onClick={() => handleArticleClick(item)}
-                  className={`
-                    ${item.priority_level === 'critical' ? 'border-l-red-600 bg-red-500/5' : 
-                      item.priority_level === 'high' ? 'border-l-orange-500 bg-orange-500/5' : 
-                      'border-l-yellow-500 bg-yellow-500/5'}
-                  `}
-                />
-              ))}
+              {breakingNews.map((item) => {
+                const sourcePriority = SourceRankingService.getSourcePriority(item.source)
+                const isTopTier = sourcePriority.category === 'tier1'
+                
+                return (
+                  <EnhancedNewsCard
+                    key={item.id}
+                    imageSrc={item.image_url}
+                    title={item.title}
+                    description={item.description}
+                    source={item.source}
+                    uploadTime={formatTimeAgo(item.detected_at)}
+                    showSuggestMore={true}
+                    isBreakingNews={true}
+                    onClick={() => handleArticleClick(item)}
+                    className={`
+                      ${item.priority_level === 'critical' ? 'border-l-red-600 bg-red-500/5 ring-1 ring-red-500/20' : 
+                        item.priority_level === 'high' ? 'border-l-orange-500 bg-orange-500/5 ring-1 ring-orange-500/20' : 
+                        'border-l-yellow-500 bg-yellow-500/5 ring-1 ring-yellow-500/20'}
+                      ${isTopTier ? 'shadow-md' : ''}
+                    `}
+                  >
+                    {/* Source tier badge for top sources */}
+                    {isTopTier && (
+                      <div className="mb-2">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-600 border border-blue-500/30">
+                          Premium Source
+                        </span>
+                      </div>
+                    )}
+                    
+                    {/* Priority level indicator */}
+                    <div className="mb-2">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        item.priority_level === 'critical' ? 'bg-red-500/20 text-red-600 border border-red-500/30' :
+                        item.priority_level === 'high' ? 'bg-orange-500/20 text-orange-600 border border-orange-500/30' :
+                        'bg-yellow-500/20 text-yellow-600 border border-yellow-500/30'
+                      }`}>
+                        {item.priority_level.toUpperCase()} • Score: {item.urgency_score}
+                      </span>
+                    </div>
+                  </EnhancedNewsCard>
+                )
+              })}
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              <p>No breaking news at the moment</p>
+              <p>No breaking news from top sources at the moment</p>
             </div>
           )}
         </motion.div>
