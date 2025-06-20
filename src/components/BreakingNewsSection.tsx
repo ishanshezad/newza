@@ -71,25 +71,30 @@ export function BreakingNewsSection({
 
   if (loading && breakingNews.length === 0) {
     return (
-      <div className={`space-y-3 ${className}`}>
-        {Array.from({ length: 2 }).map((_, index) => (
-          <div key={index} className="animate-pulse">
-            <div className="bg-card border border-border border-l-4 border-l-red-500 rounded-lg overflow-hidden shadow-sm flex flex-col sm:flex-row relative">
-              <div className="w-full sm:w-1/3 h-32 sm:h-auto bg-muted relative flex-shrink-0"></div>
-              <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
-                <div>
-                  <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-muted rounded w-full mb-1"></div>
-                  <div className="h-3 bg-muted rounded w-2/3"></div>
-                </div>
-                <div className="flex justify-between items-center mt-4">
-                  <div className="h-3 bg-muted rounded w-20"></div>
-                  <div className="h-3 bg-muted rounded w-16"></div>
+      <div className={className}>
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-red-600 dark:text-red-400 mb-2">BREAKING NEWS</h2>
+        </div>
+        <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
+          {Array.from({ length: 2 }).map((_, index) => (
+            <div key={index} className="animate-pulse flex-shrink-0 w-80">
+              <div className="bg-card border border-border border-l-4 border-l-red-500 rounded-lg overflow-hidden shadow-sm flex flex-col relative h-48">
+                <div className="w-full h-24 bg-muted relative flex-shrink-0"></div>
+                <div className="p-3 flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-muted rounded w-full mb-1"></div>
+                    <div className="h-3 bg-muted rounded w-2/3"></div>
+                  </div>
+                  <div className="flex justify-between items-center mt-2">
+                    <div className="h-3 bg-muted rounded w-20"></div>
+                    <div className="h-3 bg-muted rounded w-16"></div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     )
   }
@@ -103,84 +108,84 @@ export function BreakingNewsSection({
   }
 
   return (
-    <div className={`space-y-3 ${className}`}>
+    <div className={className}>
       <div className="mb-4">
         <h2 className="text-lg font-bold text-red-600 dark:text-red-400 mb-2">BREAKING NEWS</h2>
       </div>
       
-      <AnimatePresence mode="popLayout">
-        {breakingNews.map((item, index) => (
-          <motion.div
-            key={item.id}
-            initial={{ opacity: 0, y: -20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            transition={{ 
-              duration: 0.3,
-              delay: index * 0.1,
-              ease: "easeOut"
-            }}
-            className="bg-card border border-border border-l-4 border-l-red-500 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col sm:flex-row relative cursor-pointer group"
-            onClick={() => handleItemClick(item)}
-          >
-            {/* Dismiss button */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                handleDismiss(item.id)
+      <div className="flex gap-4 overflow-x-auto scrollbar-hide pb-2">
+        <AnimatePresence mode="popLayout">
+          {breakingNews.map((item, index) => (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, x: 20, scale: 0.95 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: -20, scale: 0.95 }}
+              transition={{ 
+                duration: 0.3,
+                delay: index * 0.1,
+                ease: "easeOut"
               }}
-              className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-black/10"
+              className="bg-card border border-border border-l-4 border-l-red-500 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col relative cursor-pointer group flex-shrink-0 w-80 h-48"
+              onClick={() => handleItemClick(item)}
             >
-              <X className="h-3 w-3 text-muted-foreground" />
-            </button>
-
-            {/* Image Preview */}
-            <div className="w-full sm:w-1/3 h-32 sm:h-auto bg-gradient-to-br from-slate-200 to-slate-300 relative flex-shrink-0">
-              <img
-                src={item.image_url || "https://picsum.photos/400/200?random=breaking"}
-                alt={item.title}
-                className="w-full h-full object-cover"
-                loading="lazy"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement
-                  target.style.display = 'none'
+              {/* Dismiss button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleDismiss(item.id)
                 }}
-              />
-            </div>
+                className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-black/10"
+              >
+                <X className="h-3 w-3 text-muted-foreground" />
+              </button>
 
-            {/* Content */}
-            <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
-              <div>
-                <h3 className="font-semibold text-sm sm:text-base mb-1 text-foreground line-clamp-2">
-                  {item.title}
-                </h3>
-                {item.description && (
-                  <p className="text-muted-foreground text-xs sm:text-sm leading-snug line-clamp-3 mb-2">
-                    {item.description}
-                  </p>
-                )}
+              {/* Image Preview */}
+              <div className="w-full h-24 bg-gradient-to-br from-slate-200 to-slate-300 relative flex-shrink-0">
+                <img
+                  src={item.image_url || "https://picsum.photos/400/200?random=breaking"}
+                  alt={item.title}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement
+                    target.style.display = 'none'
+                  }}
+                />
               </div>
-              
-              <div className="flex justify-between items-center mt-auto">
-                <span className="text-xs text-muted-foreground font-medium">
-                  {item.source}
-                </span>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">
-                      {formatTimeAgo(item.detected_at)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs">
+
+              {/* Content */}
+              <div className="p-3 flex-1 flex flex-col justify-between">
+                <div>
+                  <h3 className="font-semibold text-sm mb-1 text-foreground line-clamp-2">
+                    {item.title}
+                  </h3>
+                  {item.description && (
+                    <p className="text-muted-foreground text-xs leading-snug line-clamp-2 mb-2">
+                      {item.description}
+                    </p>
+                  )}
+                </div>
+                
+                <div className="flex justify-between items-center mt-auto">
+                  <span className="text-xs text-muted-foreground font-medium truncate mr-2">
+                    {item.source}
+                  </span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">
+                        {formatTimeAgo(item.detected_at)}
+                      </span>
+                    </div>
                     <ExternalLink className="h-3 w-3 text-muted-foreground" />
                   </div>
                 </div>
               </div>
-            </div>
-          </motion.div>
-        ))}
-      </AnimatePresence>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
     </div>
   )
 }
