@@ -1,4 +1,3 @@
-```tsx
 import React, { useState } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { TikTokHeader } from './components/ui/TikTokHeader'
@@ -152,4 +151,3 @@ function App() {
 }
 
 export default App
-```

@@ -1,4 +1,3 @@
-```tsx
 import React, { useEffect } from 'react'
 import { motion } from "framer-motion"
 
@@ -28,7 +27,7 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute inset-0" style={{
-          backgroundImage: \`radial-gradient(circle at 25% 25%, rgba(139, 134, 128, 0.3) 0%, transparent 50%),
+          backgroundImage: `radial-gradient(circle at 25% 25%, rgba(139, 134, 128, 0.3) 0%, transparent 50%),
                            radial-gradient(circle at 75% 75%, rgba(128, 0, 0, 0.3) 0%, transparent 50%)`
         }} />
       </div>
@@ -141,8 +140,8 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
             className="absolute w-1 h-1 rounded-full opacity-30"
             style={{ 
               backgroundColor: "#F5F5DC",
-              left: \`${Math.random() * 100}%`,
-              top: \`${Math.random() * 100}%`
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`
             }}
             animate={{
               y: [-20, -100],
@@ -169,4 +168,3 @@ export const SplashScreens = {
 }
 
 export default SplashScreen
-```
