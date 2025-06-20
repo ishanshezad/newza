@@ -437,7 +437,7 @@ export function MiddleEastWarFeed({ searchQuery = "", selectedTags = [] }: Middl
             >
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Loading more articles...</span>
-            </div>
+            </motion.div>
           )}
         </div>
       )}
