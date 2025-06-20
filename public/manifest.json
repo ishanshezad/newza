@@ -1,0 +1,27 @@
+{
+  "name": "newza!",
+  "short_name": "newza!",
+  "description": "Latest breaking news from Bangladesh, Asia, and around the world",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/app-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/app-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["news", "productivity"],
+  "lang": "en",
+  "dir": "ltr"
+}
