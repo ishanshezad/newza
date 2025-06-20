@@ -1,291 +1,172 @@
-import React, { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from "framer-motion"
-import { Zap, Star, Award, Target, Flame, TrendingUp } from 'lucide-react'
+```tsx
+import React, { useEffect } from 'react'
+import { motion } from "framer-motion"
 
 interface SplashScreenProps {
   onComplete: () => void
 }
 
-const SplashScreen1 = ({ onComplete }: SplashScreenProps) => {
+const SplashScreen = ({ onComplete }: SplashScreenProps) => {
   useEffect(() => {
-    const timer = setTimeout(onComplete, 3000)
-    return () => clearTimeout(timer)
-  }, [onComplete])
+    const timer = setTimeout(() => {
+      onComplete();
+    }, 3000); // Show splash for 3 seconds
+
+    return () => clearTimeout(timer);
+  }, [onComplete]);
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-800 flex items-center justify-center z-50">
-      <motion.div
-        initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        className="text-center"
-      >
-        <motion.div
-          initial={{ y: -50 }}
-          animate={{ y: 0 }}
-          transition={{ delay: 0.3, duration: 0.6 }}
-          className="mb-8"
-        >
-          <div className="w-24 h-24 mx-auto mb-6 relative">
-            <div className="absolute inset-0 bg-white rounded-2xl shadow-2xl flex items-center justify-center">
-              <div className="text-4xl font-black text-transparent bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text">
-                n!
-              </div>
-            </div>
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-              className="absolute -inset-2 border-4 border-white/30 rounded-3xl"
-            />
-          </div>
-        </motion.div>
-        
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6, duration: 0.6 }}
-          className="text-4xl font-black text-white mb-2"
-        >
-          newza!
-        </motion.h1>
-        
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.9, duration: 0.6 }}
-          className="text-white/80 text-lg"
-        >
-          news that matters.
-        </motion.p>
-        
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: "100%" }}
-          transition={{ delay: 1.5, duration: 1 }}
-          className="w-32 h-1 bg-white/30 rounded-full mx-auto mt-8 overflow-hidden"
-        >
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: "100%" }}
-            transition={{ delay: 1.5, duration: 1 }}
-            className="h-full bg-white rounded-full"
-          />
-        </motion.div>
-      </motion.div>
-    </div>
-  )
-}
-
-const SplashScreen2 = ({ onComplete }: SplashScreenProps) => {
-  useEffect(() => {
-    const timer = setTimeout(onComplete, 3000)
-    return () => clearTimeout(timer)
-  }, [onComplete])
-
-  return (
-    <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1 }}
-        className="text-center"
-      >
-        <motion.div
-          initial={{ scale: 0.5, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.5, duration: 0.8, ease: "easeOut" }}
-          className="mb-8"
-        >
-          <div className="w-32 h-32 mx-auto relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-yellow-400 via-orange-500 to-red-600 rounded-full shadow-2xl flex items-center justify-center">
-              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center">
-                <Zap className="h-10 w-10 text-orange-500" />
-              </div>
-            </div>
-            {[...Array(3)].map((_, i) => (
-              <motion.div
-                key={i}
-                animate={{ scale: [1, 1.5, 1], opacity: [0.7, 0, 0.7] }}
-                transition={{ duration: 2, repeat: Infinity, delay: i * 0.4 }}
-                className="absolute inset-0 border-2 border-orange-400 rounded-full"
-              />
-            ))}
-          </div>
-        </motion.div>
-        
-        <motion.div
-          initial={{ y: 50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 1, duration: 0.6 }}
-        >
-          <h1 className="text-5xl font-black text-white mb-4">
-            <span className="text-transparent bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text">
-              New
-            </span>
-            <span className="text-transparent bg-gradient-to-r from-orange-500 to-red-600 bg-clip-text">
-              za!
-            </span>
-          </h1>
-          <p className="text-gray-400 text-xl">Stay informed. Stay ahead.</p>
-        </motion.div>
-      </motion.div>
-    </div>
-  )
-}
-
-const SplashScreen3 = ({ onComplete }: SplashScreenProps) => {
-  useEffect(() => {
-    const timer = setTimeout(onComplete, 3500)
-    return () => clearTimeout(timer)
-  }, [onComplete])
-
-  return (
-    <div className="fixed inset-0 bg-gradient-to-t from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center z-50">
-      <div className="text-center relative">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1, ease: "easeOut" }}
-          className="mb-12"
-        >
-          <div className="relative w-40 h-40 mx-auto">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-              className="absolute inset-0"
-            >
-              <div className="w-full h-full border-4 border-purple-500/30 rounded-full" />
-              <div className="absolute top-0 left-1/2 w-3 h-3 bg-purple-400 rounded-full -translate-x-1/2 -translate-y-1/2" />
-            </motion.div>
-            
-            <motion.div
-              animate={{ rotate: -360 }}
-              transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-              className="absolute inset-4"
-            >
-              <div className="w-full h-full border-2 border-blue-400/40 rounded-full" />
-              <div className="absolute top-0 right-0 w-2 h-2 bg-blue-400 rounded-full translate-x-1/2 -translate-y-1/2" />
-            </motion.div>
-            
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-purple-400 to-blue-500 rounded-2xl flex items-center justify-center shadow-2xl">
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.8, duration: 0.5 }}
-                  className="text-white font-black text-xl"
-                >
-                  N!
-                </motion.div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-        
-        <motion.div
-          initial={{ y: 30, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 1.2, duration: 0.8 }}
-        >
-          <h1 className="text-6xl font-black text-white mb-4 tracking-tight">
-            Newza!
-          </h1>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.8, duration: 0.6 }}
-            className="text-purple-200 text-xl font-medium"
-          >
-            News That Matters
-          </motion.p>
-        </motion.div>
-        
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 2.5, duration: 0.5 }}
-          className="absolute bottom-8 left-1/2 transform -translate-x-1/2"
-        >
-          <div className="flex space-x-1">
-            {[...Array(3)].map((_, i) => (
-              <motion.div
-                key={i}
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
-                className="w-2 h-2 bg-purple-400 rounded-full"
-              />
-            ))}
-          </div>
-        </motion.div>
+    <motion.div
+      className="fixed inset-0 z-[100] flex items-center justify-center"
+      style={{
+        background: "linear-gradient(135deg, #8B8680 0%, #800000 50%, #F5F5DC 100%)"
+      }}
+      initial={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `radial-gradient(circle at 25% 25%, rgba(139, 134, 128, 0.3) 0%, transparent 50%),
+                           radial-gradient(circle at 75% 75%, rgba(128, 0, 0, 0.3) 0%, transparent 50%)`
+        }} />
       </div>
-    </div>
-  )
-}
 
-const SplashScreen4 = ({ onComplete }: SplashScreenProps) => {
-  useEffect(() => {
-    const timer = setTimeout(onComplete, 3000)
-    return () => clearTimeout(timer)
-  }, [onComplete])
-
-  return (
-    <div className="fixed inset-0 bg-white flex items-center justify-center z-50">
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.8 }}
-        className="text-center"
-      >
+      {/* Main Content */}
+      <div className="relative flex flex-col items-center">
+        {/* Logo Animation */}
         <motion.div
           initial={{ scale: 0, rotate: -180 }}
           animate={{ scale: 1, rotate: 0 }}
-          transition={{ delay: 0.3, duration: 1, ease: "easeOut" }}
+          transition={{ 
+            type: "spring", 
+            stiffness: 260, 
+            damping: 20,
+            duration: 1.2 
+          }}
           className="mb-8"
         >
-          <div className="w-28 h-28 mx-auto relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-400 to-blue-600 rounded-3xl shadow-xl flex items-center justify-center transform rotate-12">
-              <div className="text-3xl font-black text-white">N</div>
-            </div>
-            <div className="absolute inset-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-lg flex items-center justify-center transform -rotate-12">
-              <div className="text-2xl font-black text-white">!</div>
-            </div>
+          <div className="relative">
+            {/* Logo Background Circle */}
+            <motion.div
+              className="w-24 h-24 rounded-full flex items-center justify-center shadow-2xl"
+              style={{ backgroundColor: "#F5F5DC" }}
+              initial={{ boxShadow: "0 0 0 0 rgba(128, 0, 0, 0.4)" }}
+              animate={{ 
+                boxShadow: [
+                  "0 0 0 0 rgba(128, 0, 0, 0.4)",
+                  "0 0 0 20px rgba(128, 0, 0, 0)",
+                  "0 0 0 0 rgba(128, 0, 0, 0)"
+                ]
+              }}
+              transition={{ 
+                duration: 2,
+                repeat: Infinity,
+                repeatDelay: 1
+              }}
+            >
+              {/* Logo Text */}
+              <motion.span
+                className="text-3xl font-bold"
+                style={{ color: "#800000" }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5, duration: 0.5 }}
+              >
+                n!
+              </motion.span>
+            </motion.div>
           </div>
         </motion.div>
-        
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
+
+        {/* App Name */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8, duration: 0.6 }}
-          className="text-5xl font-black text-gray-900 mb-2"
+          className="text-center"
         >
-          Newza!
-        </motion.h1>
-        
-        <motion.p
+          <h1 
+            className="text-4xl font-bold mb-2 tracking-wide font-serif"
+            style={{ 
+              color: "#F5F5DC",
+              fontFamily: "'Times New Roman', 'Georgia', 'serif'"
+            }}
+          >
+            newza!
+          </h1>
+          <motion.p
+            className="text-lg opacity-80"
+            style={{ color: "#F5F5DC" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.8 }}
+            transition={{ delay: 1.2, duration: 0.5 }}
+          >
+            Your News, Reimagined
+          </motion.p>
+        </motion.div>
+
+        {/* Loading Animation */}
+        <motion.div
+          className="mt-12 flex space-x-2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.2, duration: 0.6 }}
-          className="text-gray-600 text-lg font-medium"
+          transition={{ delay: 1.5, duration: 0.5 }}
         >
-          Read. Learn. Stay Updated.
-        </motion.p>
-        
-        <motion.div
-          initial={{ scaleX: 0 }}
-          animate={{ scaleX: 1 }}
-          transition={{ delay: 1.8, duration: 0.8 }}
-          className="w-24 h-1 bg-gradient-to-r from-emerald-400 to-blue-600 rounded-full mx-auto mt-8"
-        />
-      </motion.div>
-    </div>
-  )
-}
+          {[0, 1, 2].map((index) => (
+            <motion.div
+              key={index}
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: "#F5F5DC" }}
+              animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.5, 1, 0.5]
+              }}
+              transition={{
+                duration: 1,
+                repeat: Infinity,
+                delay: index * 0.2
+              }}
+            />
+          ))}
+        </motion.div>
+      </div>
+
+      {/* Subtle Particles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {[...Array(6)].map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-1 h-1 rounded-full opacity-30"
+            style={{ 
+              backgroundColor: "#F5F5DC",
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`
+            }}
+            animate={{
+              y: [-20, -100],
+              opacity: [0, 0.6, 0]
+            }}
+            transition={{
+              duration: 3,
+              repeat: Infinity,
+              delay: i * 0.5,
+              ease: "easeOut"
+            }}
+          />
+        ))}
+      </div>
+    </motion.div>
+  );
+};
 
 export const SplashScreens = {
-  SplashScreen1,
-  SplashScreen2,
-  SplashScreen3,
-  SplashScreen4
+  SplashScreen1: SplashScreen,
+  SplashScreen2: SplashScreen,
+  SplashScreen3: SplashScreen,
+  SplashScreen4: SplashScreen
 }
 
-export default SplashScreen1
+export default SplashScreen
+```

@@ -1,6 +1,7 @@
+```tsx
 import * as React from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { AlertTriangle, Clock, ExternalLink, Zap, TrendingUp, X } from "lucide-react"
+import { Clock, ExternalLink, X } from "lucide-react"
 import { supabase, type BreakingNews } from "../lib/breakingNewsSupabase"
 import { formatTimeAgo } from "../lib/utils"
 
@@ -69,53 +70,22 @@ export function BreakingNewsSection({
     window.open(item.article_url, '_blank', 'noopener,noreferrer')
   }
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'critical':
-        return {
-          bg: 'bg-red-50 dark:bg-red-950/20',
-          border: 'border-red-200 dark:border-red-800',
-          text: 'text-red-800 dark:text-red-200',
-          accent: 'text-red-600 dark:text-red-400',
-          icon: 'text-red-600 dark:text-red-400'
-        }
-      case 'high':
-        return {
-          bg: 'bg-orange-50 dark:bg-orange-950/20',
-          border: 'border-orange-200 dark:border-orange-800',
-          text: 'text-orange-800 dark:text-orange-200',
-          accent: 'text-orange-600 dark:text-orange-400',
-          icon: 'text-orange-600 dark:text-orange-400'
-        }
-      default:
-        return {
-          bg: 'bg-yellow-50 dark:bg-yellow-950/20',
-          border: 'border-yellow-200 dark:border-yellow-800',
-          text: 'text-yellow-800 dark:text-yellow-200',
-          accent: 'text-yellow-600 dark:text-yellow-400',
-          icon: 'text-yellow-600 dark:text-yellow-400'
-        }
-    }
-  }
-
-  const getUrgencyIcon = (urgencyScore: number) => {
-    if (urgencyScore >= 80) return <Zap className="h-4 w-4" />
-    if (urgencyScore >= 60) return <TrendingUp className="h-4 w-4" />
-    return <AlertTriangle className="h-4 w-4" />
-  }
-
   if (loading && breakingNews.length === 0) {
     return (
       <div className={`space-y-3 ${className}`}>
         {Array.from({ length: 2 }).map((_, index) => (
           <div key={index} className="animate-pulse">
-            <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <div className="w-5 h-5 bg-red-300 rounded-full"></div>
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-red-300 rounded w-1/4"></div>
-                  <div className="h-4 bg-red-200 rounded w-3/4"></div>
-                  <div className="h-3 bg-red-200 rounded w-1/2"></div>
+            <div className="bg-card border border-border border-l-4 border-l-red-500 rounded-lg overflow-hidden shadow-sm flex flex-col sm:flex-row relative">
+              <div className="w-full sm:w-1/3 h-32 sm:h-auto bg-muted relative flex-shrink-0"></div>
+              <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
+                <div>
+                  <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                  <div className="h-3 bg-muted rounded w-full mb-1"></div>
+                  <div className="h-3 bg-muted rounded w-2/3"></div>
+                </div>
+                <div className="flex justify-between items-center mt-4">
+                  <div className="h-3 bg-muted rounded w-20"></div>
+                  <div className="h-3 bg-muted rounded w-16"></div>
                 </div>
               </div>
             </div>
@@ -126,15 +96,7 @@ export function BreakingNewsSection({
   }
 
   if (error && breakingNews.length === 0) {
-    return (
-      <div className={`p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg ${className}`}>
-        <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
-          <AlertTriangle className="h-4 w-4" />
-          <span className="text-sm font-medium">Failed to load breaking news</span>
-        </div>
-        <p className="text-sm text-red-700 dark:text-red-300 mt-1">{error}</p>
-      </div>
-    )
+    return null // Don't show error state for breaking news
   }
 
   if (breakingNews.length === 0) {
@@ -143,107 +105,84 @@ export function BreakingNewsSection({
 
   return (
     <div className={`space-y-3 ${className}`}>
+      <div className="mb-4">
+        <h2 className="text-lg font-bold text-red-600 dark:text-red-400 mb-2">BREAKING NEWS</h2>
+      </div>
+      
       <AnimatePresence mode="popLayout">
-        {breakingNews.map((item, index) => {
-          const colors = getPriorityColor(item.priority_level)
-          
-          return (
-            <motion.div
-              key={item.id}
-              initial={{ opacity: 0, y: -20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              transition={{ 
-                duration: 0.3,
-                delay: index * 0.1,
-                ease: "easeOut"
+        {breakingNews.map((item, index) => (
+          <motion.div
+            key={item.id}
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            transition={{ 
+              duration: 0.3,
+              delay: index * 0.1,
+              ease: "easeOut"
+            }}
+            className="bg-card border border-border border-l-4 border-l-red-500 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col sm:flex-row relative cursor-pointer group"
+            onClick={() => handleItemClick(item)}
+          >
+            {/* Dismiss button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleDismiss(item.id)
               }}
-              className={`${colors.bg} ${colors.border} border rounded-lg p-4 cursor-pointer hover:shadow-md transition-all duration-200 relative group`}
-              onClick={() => handleItemClick(item)}
+              className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-black/10"
             >
-              {/* Dismiss button */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleDismiss(item.id)
+              <X className="h-3 w-3 text-muted-foreground" />
+            </button>
+
+            {/* Image Preview */}
+            <div className="w-full sm:w-1/3 h-32 sm:h-auto bg-gradient-to-br from-slate-200 to-slate-300 relative flex-shrink-0">
+              <img
+                src={item.image_url || "https://picsum.photos/400/200?random=breaking"}
+                alt={item.title}
+                className="w-full h-full object-cover"
+                loading="lazy"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement
+                  target.style.display = 'none'
                 }}
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-full hover:bg-black/10"
-              >
-                <X className="h-3 w-3 text-muted-foreground" />
-              </button>
+              />
+            </div>
 
-              <div className="flex items-start gap-3">
-                <div className={`${colors.icon} mt-0.5 flex-shrink-0`}>
-                  {getUrgencyIcon(item.urgency_score)}
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className={`font-semibold text-sm ${colors.text} uppercase tracking-wide`}>
-                      {item.priority_level === 'critical' ? '🚨 CRITICAL' : 
-                       item.priority_level === 'high' ? '⚠️ HIGH PRIORITY' : 
-                       '📢 BREAKING NEWS'}
-                    </h3>
-                    <div className="flex items-center gap-1">
-                      <span className={`text-xs ${colors.accent} font-medium`}>
-                        Score: {item.urgency_score}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <p className={`${colors.text} text-sm font-medium mb-2 leading-tight`}>
-                    {item.title}
+            {/* Content */}
+            <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
+              <div>
+                <h3 className="font-semibold text-sm sm:text-base mb-1 text-foreground line-clamp-2">
+                  {item.title}
+                </h3>
+                {item.description && (
+                  <p className="text-muted-foreground text-xs sm:text-sm leading-snug line-clamp-3 mb-2">
+                    {item.description}
                   </p>
-                  
-                  {item.description && (
-                    <p className={`${colors.accent} text-sm mb-2 leading-relaxed line-clamp-2`}>
-                      {item.description}
-                    </p>
-                  )}
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-xs">
-                      <span className={`${colors.accent} font-medium`}>
-                        {item.source}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <Clock className={`h-3 w-3 ${colors.accent}`} />
-                        <span className={colors.accent}>
-                          {formatTimeAgo(item.detected_at)}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-1 text-xs">
-                      <ExternalLink className={`h-3 w-3 ${colors.accent}`} />
-                      <span className={colors.accent}>Read more</span>
-                    </div>
+                )}
+              </div>
+              
+              <div className="flex justify-between items-center mt-auto">
+                <span className="text-xs text-muted-foreground font-medium">
+                  {item.source}
+                </span>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">
+                      {formatTimeAgo(item.detected_at)}
+                    </span>
                   </div>
-
-                  {/* Keywords */}
-                  {item.keywords && item.keywords.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {item.keywords.slice(0, 4).map((keyword, keywordIndex) => (
-                        <span
-                          key={keywordIndex}
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors.bg} ${colors.border} border`}
-                          style={{ 
-                            backgroundColor: `${colors.accent.includes('red') ? '#FEE2E2' : 
-                                             colors.accent.includes('orange') ? '#FEF3C7' : '#FEF9C3'}`,
-                            color: colors.accent.replace('text-', '').replace(' dark:text-red-400', '')
-                          }}
-                        >
-                          {keyword}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  <div className="flex items-center gap-1 text-xs">
+                    <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                  </div>
                 </div>
               </div>
-            </motion.div>
-          )
-        })}
+            </div>
+          </motion.div>
+        ))}
       </AnimatePresence>
     </div>
   )
 }
+```

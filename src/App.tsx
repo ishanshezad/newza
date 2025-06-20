@@ -1,3 +1,4 @@
+```tsx
 import React, { useState } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { TikTokHeader } from './components/ui/TikTokHeader'
@@ -48,15 +49,8 @@ function App() {
   }
 
   const renderSplashScreen = () => {
-    const { SplashScreen1, SplashScreen2, SplashScreen3, SplashScreen4 } = SplashScreens
-    
-    switch (splashType) {
-      case 1: return <SplashScreen1 onComplete={handleSplashComplete} />
-      case 2: return <SplashScreen2 onComplete={handleSplashComplete} />
-      case 3: return <SplashScreen3 onComplete={handleSplashComplete} />
-      case 4: return <SplashScreen4 onComplete={handleSplashComplete} />
-      default: return <SplashScreen1 onComplete={handleSplashComplete} />
-    }
+    const { SplashScreen1 } = SplashScreens
+    return <SplashScreen1 onComplete={handleSplashComplete} />
   }
 
   if (showSplash) {
@@ -76,15 +70,6 @@ function App() {
         placeholder={isMiddleEastWarCategory ? "Search Middle East war news..." : "Search breaking news..."}
       />
       
-      {/* Breaking News Section - Always visible at top */}
-      <div className="px-4 pt-4">
-        <BreakingNewsSection 
-          maxItems={3}
-          autoRefresh={true}
-          refreshInterval={60000} // 1 minute
-        />
-      </div>
-      
       {/* Main content area */}
       <div className="py-4 pb-20">
         <motion.div
@@ -96,6 +81,15 @@ function App() {
         >
           {isMiddleEastWarCategory ? (
             <div>
+              {/* Breaking News Section - Only in Middle East War tab */}
+              <div className="px-4 mb-6">
+                <BreakingNewsSection 
+                  maxItems={3}
+                  autoRefresh={true}
+                  refreshInterval={60000} // 1 minute
+                />
+              </div>
+              
               <MiddleEastWarFeed
                 searchQuery={debouncedSearchQuery}
                 selectedTags={selectedMiddleEastTags}
@@ -158,3 +152,4 @@ function App() {
 }
 
 export default App
+```
