@@ -276,8 +276,8 @@ Deno.serve(async (req) => {
             const priorityLevel = calculatePriorityLevel(urgencyScore)
             const keywords = extractKeywords(item.title, item.description)
 
-            // Insert breaking news
-            const { error: insertError } = await supabase
+            // Insert breaking news and get the ID directly
+            const { data: insertedNews, error: insertError } = await supabase
               .from('breaking_news')
               .insert({
                 title: stripHtml(item.title).substring(0, 500),
@@ -292,27 +292,30 @@ Deno.serve(async (req) => {
                 published_date: parseDate(item.pubDate),
                 expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
               })
+              .select('id')
+              .single()
 
             if (insertError) {
               console.error(`Error inserting breaking news from ${source.name}:`, insertError)
               errors.push(`${source.name}: ${insertError.message}`)
-            } else {
+            } else if (insertedNews) {
               totalBreakingNews++
               console.log(`🚨 BREAKING NEWS DETECTED: ${item.title} (Priority: ${priorityLevel}, Score: ${urgencyScore})`)
               
-              // Create alert record
-              await supabase
-                .from('breaking_news_alerts')
-                .insert({
-                  breaking_news_id: (await supabase
-                    .from('breaking_news')
-                    .select('id')
-                    .eq('article_url', item.link)
-                    .single()).data?.id,
-                  alert_type: 'new',
-                  alert_message: `Breaking: ${stripHtml(item.title)}`,
-                  severity: priorityLevel === 'critical' ? 'critical' : priorityLevel === 'high' ? 'high' : 'medium'
-                })
+              // Create alert record with the retrieved ID
+              try {
+                await supabase
+                  .from('breaking_news_alerts')
+                  .insert({
+                    breaking_news_id: insertedNews.id,
+                    alert_type: 'new',
+                    alert_message: `Breaking: ${stripHtml(item.title)}`,
+                    severity: priorityLevel === 'critical' ? 'critical' : priorityLevel === 'high' ? 'high' : 'medium'
+                  })
+              } catch (alertError) {
+                console.error(`Error creating alert for breaking news:`, alertError)
+                // Don't add to errors array as the main breaking news was inserted successfully
+              }
             }
           } catch (articleError) {
             console.error(`Error processing article from ${source.name}:`, articleError)
@@ -337,7 +340,11 @@ Deno.serve(async (req) => {
     }
 
     // Clean up expired breaking news
-    await supabase.rpc('expire_old_breaking_news')
+    try {
+      await supabase.rpc('expire_old_breaking_news')
+    } catch (cleanupError) {
+      console.error('Error cleaning up expired breaking news:', cleanupError)
+    }
 
     return new Response(
       JSON.stringify({
