@@ -64,31 +64,23 @@ function App() {
         placeholder={isMiddleEastWarCategory ? "Search Middle East war news..." : "Search breaking news..."}
       />
       
-      {/* Main content area */}
+      {/* Main content area - Removed motion animations for seamless switching */}
       <div className="py-4 pb-20">
-        <motion.div
-          key={activeCategory} // Key for seamless animation on category change
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-        >
-          {isMiddleEastWarCategory ? (
-            <div>
-              <MiddleEastWarFeed
-                searchQuery={debouncedSearchQuery}
-                selectedTags={[]}
-              />
-            </div>
-          ) : (
-            <div className="px-4 space-y-4">
-              <NewsFeed
-                category={activeCategory}
-                searchQuery={debouncedSearchQuery}
-              />
-            </div>
-          )}
-        </motion.div>
+        {isMiddleEastWarCategory ? (
+          <div>
+            <MiddleEastWarFeed
+              searchQuery={debouncedSearchQuery}
+              selectedTags={[]}
+            />
+          </div>
+        ) : (
+          <div className="px-4 space-y-4">
+            <NewsFeed
+              category={activeCategory}
+              searchQuery={debouncedSearchQuery}
+            />
+          </div>
+        )}
       </div>
 
       {/* Analytics Button - Only show in Middle East War tab - Moved to center */}
