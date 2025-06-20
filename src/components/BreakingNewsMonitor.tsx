@@ -10,6 +10,7 @@ export function BreakingNewsMonitor({ className = "" }: BreakingNewsMonitorProps
   const [isMonitoring, setIsMonitoring] = React.useState(false)
   const [lastCheck, setLastCheck] = React.useState<Date | null>(null)
   const [status, setStatus] = React.useState<'idle' | 'checking' | 'success' | 'error'>('idle')
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
   const [stats, setStats] = React.useState({
     sourcesMonitored: 0,
     breakingNewsFound: 0,
@@ -19,6 +20,7 @@ export function BreakingNewsMonitor({ className = "" }: BreakingNewsMonitorProps
   const triggerBreakingNewsCheck = async () => {
     setIsMonitoring(true)
     setStatus('checking')
+    setErrorMessage(null) // Clear any previous error messages
     
     try {
       const response = await fetch('/functions/v1/breaking-news-monitor', {
@@ -28,8 +30,30 @@ export function BreakingNewsMonitor({ className = "" }: BreakingNewsMonitorProps
         }
       })
 
-      const result = await response.json()
+      // Check if the response is OK before attempting to parse JSON
+      if (!response.ok) {
+        // Try to get error message from response body
+        let errorText = `HTTP ${response.status}: ${response.statusText}`
+        try {
+          const errorBody = await response.text()
+          if (errorBody) {
+            errorText += ` - ${errorBody}`
+          }
+        } catch (textError) {
+          // If we can't read the response body, use the status text
+        }
+        throw new Error(errorText)
+      }
+
+      // Attempt to parse JSON response
+      let result
+      try {
+        result = await response.json()
+      } catch (jsonError) {
+        throw new Error(`Invalid JSON response from server: ${jsonError instanceof Error ? jsonError.message : 'Unknown JSON parsing error'}`)
+      }
       
+      // Check if the server reported success
       if (result.success) {
         setStatus('success')
         setStats({
@@ -38,13 +62,22 @@ export function BreakingNewsMonitor({ className = "" }: BreakingNewsMonitorProps
           totalProcessed: result.totalProcessed || 0
         })
       } else {
+        // Server returned a JSON response but indicated failure
         setStatus('error')
+        setErrorMessage(result.error || 'Server reported an error but provided no details')
       }
       
       setLastCheck(new Date())
     } catch (error) {
       console.error('Breaking news check failed:', error)
       setStatus('error')
+      
+      // Set a user-friendly error message
+      if (error instanceof Error) {
+        setErrorMessage(error.message)
+      } else {
+        setErrorMessage('Unknown error occurred during breaking news check')
+      }
     } finally {
       setIsMonitoring(false)
     }
@@ -84,7 +117,7 @@ export function BreakingNewsMonitor({ className = "" }: BreakingNewsMonitorProps
       case 'success':
         return `Found ${stats.breakingNewsFound} breaking news items`
       case 'error':
-        return 'Monitoring failed'
+        return errorMessage || 'Monitoring failed'
       default:
         return 'Ready to monitor'
     }
