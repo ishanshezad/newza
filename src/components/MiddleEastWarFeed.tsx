@@ -5,8 +5,7 @@ import { Timeline } from "./ui/Timeline"
 import { LoadingSkeleton } from "./ui/LoadingSkeleton"
 import { supabase, type MiddleEastWarArticle } from "../lib/middleEastWarSupabase"
 import { SourceRankingService } from "../lib/sourceRanking"
-import { WarDevelopmentAgent, type WarDevelopment } from "../lib/warDevelopmentAgent"
-import { Loader2, AlertCircle, Clock, Star, AlertTriangle, TrendingUp, Users, MapPin, RefreshCw } from "lucide-react"
+import { Loader2, AlertCircle, Clock, Star, AlertTriangle, TrendingUp, Users, MapPin } from "lucide-react"
 import { motion } from "framer-motion"
 import { formatTimeAgo } from "../lib/utils"
 
@@ -30,9 +29,7 @@ interface TimelineEntry {
 
 export function MiddleEastWarFeed({ searchQuery = "", selectedTags = [] }: MiddleEastWarFeedProps) {
   const [articles, setArticles] = React.useState<EnhancedMiddleEastWarArticle[]>([])
-  const [developments, setDevelopments] = React.useState<WarDevelopment[]>([])
   const [loading, setLoading] = React.useState(true)
-  const [developmentsLoading, setDevelopmentsLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [hasMore, setHasMore] = React.useState(true)
   const [page, setPage] = React.useState(0)
@@ -111,19 +108,6 @@ export function MiddleEastWarFeed({ searchQuery = "", selectedTags = [] }: Middl
 
     return Math.round(score)
   }
-
-  const fetchDevelopments = React.useCallback(async () => {
-    try {
-      setDevelopmentsLoading(true)
-      const summary = await WarDevelopmentAgent.generateDevelopmentSummary()
-      setDevelopments(summary.developments)
-    } catch (error) {
-      console.error('Failed to fetch developments:', error)
-      setDevelopments([])
-    } finally {
-      setDevelopmentsLoading(false)
-    }
-  }, [])
 
   const fetchArticles = React.useCallback(async (pageNum: number, reset = false) => {
     try {
@@ -263,8 +247,7 @@ export function MiddleEastWarFeed({ searchQuery = "", selectedTags = [] }: Middl
     setArticles([])
     setHasMore(true)
     fetchArticles(0, true)
-    fetchDevelopments()
-  }, [fetchArticles, fetchDevelopments])
+  }, [fetchArticles])
 
   // Load more when scrolling
   React.useEffect(() => {
@@ -282,10 +265,6 @@ export function MiddleEastWarFeed({ searchQuery = "", selectedTags = [] }: Middl
 
   const handleArticleClick = (article: EnhancedMiddleEastWarArticle) => {
     window.open(article.article_url, '_blank', 'noopener,noreferrer')
-  }
-
-  const refreshDevelopments = () => {
-    fetchDevelopments()
   }
 
   // Group articles by date for timeline view
@@ -427,84 +406,67 @@ export function MiddleEastWarFeed({ searchQuery = "", selectedTags = [] }: Middl
 
   return (
     <div className="space-y-6">
-      {/* Latest Developments - Enhanced with AI-generated content */}
+      {/* Latest Developments */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
         className="mx-4 mb-3"
       >
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-foreground">Latest Developments</h2>
-          <button
-            onClick={refreshDevelopments}
-            disabled={developmentsLoading}
-            className="p-2 rounded-full hover:bg-accent transition-colors disabled:opacity-50"
-            title="Refresh developments"
-          >
-            <RefreshCw className={`h-4 w-4 ${developmentsLoading ? 'animate-spin' : ''}`} />
-          </button>
+        <h2 className="text-lg font-semibold mb-3 text-foreground">Latest Developments</h2>
+        <div className="flex overflow-x-auto space-x-4 pb-2 scrollbar-hide">
+          <div className="flex-shrink-0 w-72 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <h3 className="font-semibold text-red-800 dark:text-red-200 text-sm">CEASEFIRE TALKS</h3>
+                <p className="text-red-700 dark:text-red-300 text-sm mt-1">
+                  Negotiations have resumed with international mediators present. Both sides report cautious optimism.
+                </p>
+                <span className="text-xs text-red-600 dark:text-red-400">2 minutes ago</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex-shrink-0 w-72 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <Users className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <h3 className="font-semibold text-orange-800 dark:text-orange-200 text-sm">HUMANITARIAN AID</h3>
+                <p className="text-orange-700 dark:text-orange-300 text-sm mt-1">
+                  New convoy reaches affected areas with medical supplies and food assistance.
+                </p>
+                <span className="text-xs text-orange-600 dark:text-orange-400">15 minutes ago</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex-shrink-0 w-72 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <h3 className="font-semibold text-blue-800 dark:text-blue-200 text-sm">BORDER UPDATE</h3>
+                <p className="text-blue-700 dark:text-blue-300 text-sm mt-1">
+                  International observers report reduced military activity along disputed borders.
+                </p>
+                <span className="text-xs text-blue-600 dark:text-blue-400">32 minutes ago</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex-shrink-0 w-72 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <TrendingUp className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <h3 className="font-semibold text-green-800 dark:text-green-200 text-sm">DIPLOMATIC PROGRESS</h3>
+                <p className="text-green-700 dark:text-green-300 text-sm mt-1">
+                  Regional leaders express support for ongoing peace initiatives and dialogue.
+                </p>
+                <span className="text-xs text-green-600 dark:text-green-400">1 hour ago</span>
+              </div>
+            </div>
+          </div>
         </div>
-        
-        {developmentsLoading ? (
-          <div className="flex overflow-x-auto space-x-4 pb-2 scrollbar-hide">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex-shrink-0 w-72 h-24 bg-muted/50 rounded-lg animate-pulse" />
-            ))}
-          </div>
-        ) : (
-          <div className="flex overflow-x-auto space-x-4 pb-2 scrollbar-hide">
-            {developments.map((dev, index) => {
-              const categoryColor = WarDevelopmentAgent.getCategoryColor(dev.category)
-              const urgencyIcon = WarDevelopmentAgent.getUrgencyIcon(dev.urgency)
-              
-              return (
-                <div 
-                  key={dev.id} 
-                  className="flex-shrink-0 w-72 border rounded-lg p-4"
-                  style={{ 
-                    backgroundColor: `${categoryColor}10`, 
-                    borderColor: `${categoryColor}30` 
-                  }}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <span className="text-sm">{urgencyIcon}</span>
-                      <div 
-                        className="h-5 w-5 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: categoryColor }}
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <h3 
-                        className="font-semibold text-sm mb-1"
-                        style={{ color: categoryColor }}
-                      >
-                        {dev.title}
-                      </h3>
-                      <p className="text-sm text-foreground/80 mb-2 line-clamp-3">
-                        {dev.description}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">
-                          {formatTimeAgo(dev.timestamp)}
-                        </span>
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs text-muted-foreground">
-                            {dev.confidence}% confidence
-                          </span>
-                          {dev.confidence >= 90 && (
-                            <Star className="h-3 w-3 text-yellow-500" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
       </motion.div>
 
       {/* Timeline View */}

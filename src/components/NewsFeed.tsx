@@ -34,7 +34,6 @@ interface BreakingNewsItem {
   urgency_score: number
   published_date: string
   detected_at: string
-  credibility_score?: number
 }
 
 export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsFeedProps) {
@@ -53,7 +52,7 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
 
   const ITEMS_PER_PAGE = 10
 
-  // Fetch breaking news for "Today" category with credibility prioritization
+  // Fetch breaking news for "Today" category
   const fetchBreakingNews = React.useCallback(async () => {
     if (category !== "Today") {
       setBreakingNews([])
@@ -64,45 +63,18 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
     try {
       setBreakingNewsLoading(true)
       
-      // Join with breaking_news_sources to get credibility scores
       const { data, error } = await supabase
         .from('breaking_news')
-        .select(`
-          *,
-          breaking_news_sources!inner(credibility_score)
-        `)
+        .select('*')
         .eq('is_active', true)
         .gt('expires_at', new Date().toISOString())
-        .not('description', 'is', null) // Only articles with valid descriptions
-        .neq('description', '') // Exclude empty descriptions
         .order('urgency_score', { ascending: false })
         .order('detected_at', { ascending: false })
-        .limit(10) // Fetch more to filter by credibility
+        .limit(6)
 
       if (error) throw error
 
-      // Process and prioritize by credibility score
-      const processedNews = (data || [])
-        .map(item => ({
-          ...item,
-          credibility_score: item.breaking_news_sources?.credibility_score || 50
-        }))
-        .filter(item => item.description && item.description.trim().length > 20) // Ensure meaningful descriptions
-        .sort((a, b) => {
-          // Primary sort: credibility score (higher is better)
-          if (Math.abs(a.credibility_score - b.credibility_score) > 5) {
-            return b.credibility_score - a.credibility_score
-          }
-          // Secondary sort: urgency score
-          if (Math.abs(a.urgency_score - b.urgency_score) > 5) {
-            return b.urgency_score - a.urgency_score
-          }
-          // Tertiary sort: recency
-          return new Date(b.detected_at).getTime() - new Date(a.detected_at).getTime()
-        })
-        .slice(0, 6) // Take top 6 after sorting
-
-      setBreakingNews(processedNews)
+      setBreakingNews(data || [])
     } catch (err) {
       console.error('Failed to fetch breaking news:', err)
       setBreakingNews([])
@@ -311,19 +283,8 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
                     ${item.priority_level === 'critical' ? 'border-l-red-600 bg-red-500/5' : 
                       item.priority_level === 'high' ? 'border-l-orange-500 bg-orange-500/5' : 
                       'border-l-yellow-500 bg-yellow-500/5'}
-                    ${(item.credibility_score || 50) >= 90 ? 'ring-1 ring-blue-500/30' : ''}
                   `}
-                >
-                  {/* Credibility indicator for high-credibility sources */}
-                  {(item.credibility_score || 50) >= 90 && (
-                    <div className="mb-2">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                        <Star className="h-3 w-3 mr-1" />
-                        Verified Source
-                      </span>
-                    </div>
-                  )}
-                </EnhancedNewsCard>
+                />
               ))}
             </div>
           ) : (
