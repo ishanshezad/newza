@@ -46,10 +46,6 @@ export function NewsCard({
   const displayTitle = TranslationService.getDisplayTitle(article)
   const displayDescription = TranslationService.getDisplayDescription(article)
 
-  // Get source tier information
-  const sourceTierBadge = SourceRankingService.getSourceTierBadge(article.source)
-  const isPopularSource = article.source_tier === 'tier1'
-
   return (
     <EnhancedNewsCard
       imageSrc={article.image_url}
@@ -60,27 +56,9 @@ export function NewsCard({
       showSuggestMore={showSuggestMore}
       onClick={handleClick}
       onSuggestMoreClick={handleSuggestMoreClick}
-      className={`
-        group
-        ${isPopularSource ? 'border-l-blue-500 shadow-md' : ''}
-      `}
+      className="group"
       index={index}
     >
-      {/* Source Tier Badge for Popular Sources */}
-      {isPopularSource && (
-        <div className="mb-2">
-          <span
-            className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-            style={{ 
-              backgroundColor: sourceTierBadge.bgColor, 
-              color: sourceTierBadge.color 
-            }}
-          >
-            ⭐ {sourceTierBadge.label} Source
-          </span>
-        </div>
-      )}
-
       {/* Translation and Category Indicators */}
       <TranslationIndicator 
         article={article} 

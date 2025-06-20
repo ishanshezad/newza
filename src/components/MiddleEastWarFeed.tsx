@@ -331,8 +331,6 @@ export function MiddleEastWarFeed({ searchQuery = "", selectedTags = [] }: Middl
             articleTags.sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0))
 
             const isHighPriority = (article.priority_score || 0) > 150
-            const sourceTierBadge = SourceRankingService.getSourceTierBadge(article.source)
-            const isTopSource = SourceRankingService.isTopPrioritySource(article.source)
 
             return (
               <EnhancedNewsCard
@@ -346,26 +344,9 @@ export function MiddleEastWarFeed({ searchQuery = "", selectedTags = [] }: Middl
                 onClick={() => handleArticleClick(article)}
                 className={`
                   ${isHighPriority ? 'border-red-500/30 bg-red-500/5' : ''}
-                  ${isTopSource ? 'border-l-blue-500 shadow-md' : ''}
                 `}
                 index={index}
               >
-                {/* Source Tier Badge for Top Sources */}
-                {isTopSource && (
-                  <div className="mb-2">
-                    <span
-                      className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-                      style={{ 
-                        backgroundColor: sourceTierBadge.bgColor, 
-                        color: sourceTierBadge.color 
-                      }}
-                    >
-                      <Star className="h-3 w-3 mr-1" />
-                      {sourceTierBadge.label} Source
-                    </span>
-                  </div>
-                )}
-
                 {/* Tags */}
                 {articleTags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3">
@@ -456,7 +437,7 @@ export function MiddleEastWarFeed({ searchQuery = "", selectedTags = [] }: Middl
             >
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               <span className="text-sm text-muted-foreground">Loading more articles...</span>
-            </motion.div>
+            </div>
           )}
         </div>
       )}

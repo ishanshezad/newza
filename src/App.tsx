@@ -3,7 +3,6 @@ import { Toaster } from 'react-hot-toast'
 import { TikTokHeader } from './components/ui/TikTokHeader'
 import { NewsFeed } from './components/NewsFeed'
 import { MiddleEastWarFeed } from './components/MiddleEastWarFeed'
-import { BreakingNewsSection } from './components/BreakingNewsSection'
 import { BreakingNewsMonitor } from './components/BreakingNewsMonitor'
 import { WarDashboard } from './components/ui/WarDashboard'
 import { SplashScreens } from './components/SplashScreen'
@@ -80,15 +79,6 @@ function App() {
         >
           {isMiddleEastWarCategory ? (
             <div>
-              {/* Breaking News Section - Only in Middle East War tab */}
-              <div className="px-4 mb-6">
-                <BreakingNewsSection 
-                  maxItems={3}
-                  autoRefresh={true}
-                  refreshInterval={60000} // 1 minute
-                />
-              </div>
-              
               <MiddleEastWarFeed
                 searchQuery={debouncedSearchQuery}
                 selectedTags={selectedMiddleEastTags}
