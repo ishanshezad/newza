@@ -23,41 +23,24 @@ interface EnhancedNewsArticle extends NewsArticle {
   source_tier?: string
 }
 
-// Mock breaking news data for horizontal feed
-const breakingNewsData = [
-  {
-    title: "New AI breakthrough in medical diagnostics",
-    description: "Researchers announce a significant leap in AI's ability to detect early signs of disease.",
-    imageSrc: "https://picsum.photos/400/200?random=100",
-    source: "Tech Today",
-    uploadTime: "15m ago"
-  },
-  {
-    title: "Global markets react to central bank decision",
-    description: "Unexpected interest rate hike sends ripples across stock exchanges worldwide.",
-    imageSrc: "https://picsum.photos/400/200?random=101",
-    source: "Financial Times",
-    uploadTime: "30m ago"
-  },
-  {
-    title: "Rare celestial event visible tonight",
-    description: "Astronomers advise stargazers to prepare for a once-in-a-lifetime meteor shower.",
-    imageSrc: "https://picsum.photos/400/200?random=102",
-    source: "Space.com",
-    uploadTime: "1h ago"
-  },
-  {
-    title: "Local elections see record voter turnout",
-    description: "Early results indicate a significant shift in political landscape.",
-    imageSrc: "https://picsum.photos/400/200?random=103",
-    source: "Local Gazette",
-    uploadTime: "2h ago"
-  },
-]
+interface BreakingNewsItem {
+  id: string
+  title: string
+  description: string | null
+  article_url: string
+  image_url: string | null
+  source: string
+  priority_level: string
+  urgency_score: number
+  published_date: string
+  detected_at: string
+}
 
 export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsFeedProps) {
   const [articles, setArticles] = React.useState<EnhancedNewsArticle[]>([])
+  const [breakingNews, setBreakingNews] = React.useState<BreakingNewsItem[]>([])
   const [loading, setLoading] = React.useState(true)
+  const [breakingNewsLoading, setBreakingNewsLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [hasMore, setHasMore] = React.useState(true)
   const [page, setPage] = React.useState(0)
@@ -68,6 +51,37 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
   })
 
   const ITEMS_PER_PAGE = 10
+
+  // Fetch breaking news for "Today" category
+  const fetchBreakingNews = React.useCallback(async () => {
+    if (category !== "Today") {
+      setBreakingNews([])
+      setBreakingNewsLoading(false)
+      return
+    }
+
+    try {
+      setBreakingNewsLoading(true)
+      
+      const { data, error } = await supabase
+        .from('breaking_news')
+        .select('*')
+        .eq('is_active', true)
+        .gt('expires_at', new Date().toISOString())
+        .order('urgency_score', { ascending: false })
+        .order('detected_at', { ascending: false })
+        .limit(6)
+
+      if (error) throw error
+
+      setBreakingNews(data || [])
+    } catch (err) {
+      console.error('Failed to fetch breaking news:', err)
+      setBreakingNews([])
+    } finally {
+      setBreakingNewsLoading(false)
+    }
+  }, [category])
 
   const fetchArticles = React.useCallback(async (pageNum: number, reset = false) => {
     try {
@@ -168,7 +182,8 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
     setArticles([])
     setHasMore(true)
     fetchArticles(0, true)
-  }, [fetchArticles])
+    fetchBreakingNews()
+  }, [fetchArticles, fetchBreakingNews])
 
   // Load more when scrolling
   React.useEffect(() => {
@@ -184,7 +199,7 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
     }
   }, [inView, hasMore, loading, articles.length])
 
-  const handleArticleClick = (article: NewsArticle) => {
+  const handleArticleClick = (article: NewsArticle | BreakingNewsItem) => {
     window.open(article.article_url, '_blank', 'noopener,noreferrer')
   }
 
@@ -233,30 +248,52 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
 
   return (
     <div className="space-y-6">
-      {/* Horizontal Breaking News Feed */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="mb-6"
-      >
-        <h2 className="text-lg font-semibold mb-3 text-foreground">Breaking News</h2>
-        <div className="flex overflow-x-auto space-x-4 pb-2 scrollbar-hide">
-          {breakingNewsData.map((article, i) => (
-            <EnhancedNewsCard
-              key={`breaking-${i}`}
-              imageSrc={article.imageSrc}
-              title={article.title}
-              description={article.description}
-              source={article.source}
-              uploadTime={article.uploadTime}
-              showSuggestMore={true}
-              isBreakingNews={true}
-              onClick={() => console.log('Breaking news clicked:', article.title)}
-            />
-          ))}
-        </div>
-      </motion.div>
+      {/* Breaking News Section - Only show for "Today" category */}
+      {category === "Today" && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mb-6"
+        >
+          <h2 className="text-lg font-semibold mb-3 text-foreground">Breaking News</h2>
+          
+          {breakingNewsLoading ? (
+            <div className="flex overflow-x-auto space-x-4 pb-2 scrollbar-hide">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex-shrink-0 w-64">
+                  <LoadingSkeleton variant="card" count={1} />
+                </div>
+              ))}
+            </div>
+          ) : breakingNews.length > 0 ? (
+            <div className="flex overflow-x-auto space-x-4 pb-2 scrollbar-hide">
+              {breakingNews.map((item) => (
+                <EnhancedNewsCard
+                  key={item.id}
+                  imageSrc={item.image_url}
+                  title={item.title}
+                  description={item.description}
+                  source={item.source}
+                  uploadTime={formatTimeAgo(item.detected_at)}
+                  showSuggestMore={true}
+                  isBreakingNews={true}
+                  onClick={() => handleArticleClick(item)}
+                  className={`
+                    ${item.priority_level === 'critical' ? 'border-l-red-600 bg-red-500/5' : 
+                      item.priority_level === 'high' ? 'border-l-orange-500 bg-orange-500/5' : 
+                      'border-l-yellow-500 bg-yellow-500/5'}
+                  `}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No breaking news at the moment</p>
+            </div>
+          )}
+        </motion.div>
+      )}
 
       {/* Optimized Recommendations Section - Show after first few articles */}
       {articles.length >= 3 && (
