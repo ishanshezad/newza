@@ -346,7 +346,7 @@ export function MiddleEastWarFeed({ searchQuery = "", selectedTags = [] }: Middl
                 onClick={() => handleArticleClick(article)}
                 className={`
                   ${isHighPriority ? 'border-red-500/30 bg-red-500/5' : ''}
-                  ${isTopSource ? 'border-l-blue-500 shadow-md' : ''}
+                  ${isTopSource ? 'border-l-[#800000] shadow-md' : ''}
                 `}
                 index={index}
               >
@@ -356,8 +356,9 @@ export function MiddleEastWarFeed({ searchQuery = "", selectedTags = [] }: Middl
                     <span
                       className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
                       style={{ 
-                        backgroundColor: sourceTierBadge.bgColor, 
-                        color: sourceTierBadge.color 
+                        backgroundColor: '#F5F5DC', 
+                        color: '#800000',
+                        border: '1px solid #800000'
                       }}
                     >
                       <Star className="h-3 w-3 mr-1" />
