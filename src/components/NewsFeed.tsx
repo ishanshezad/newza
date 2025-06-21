@@ -23,23 +23,31 @@ interface EnhancedNewsArticle extends NewsArticle {
   source_tier?: string
 }
 
-interface BreakingNewsItem {
+interface BreakingNewsAlert {
   id: string
-  title: string
-  description: string | null
-  article_url: string
-  image_url: string | null
-  source: string
-  priority_level: string
-  urgency_score: number
-  published_date: string
-  detected_at: string
-  keywords: string[]
+  alert_type: string
+  alert_message: string
+  severity: string
+  sent_at: string
+  created_at: string
+  breaking_news: {
+    id: string
+    title: string
+    description: string | null
+    article_url: string
+    image_url: string | null
+    source: string
+    priority_level: string
+    urgency_score: number
+    published_date: string
+    detected_at: string
+    keywords: string[]
+  }
 }
 
 export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsFeedProps) {
   const [articles, setArticles] = React.useState<EnhancedNewsArticle[]>([])
-  const [breakingNews, setBreakingNews] = React.useState<BreakingNewsItem[]>([])
+  const [breakingNewsAlerts, setBreakingNewsAlerts] = React.useState<BreakingNewsAlert[]>([])
   const [loading, setLoading] = React.useState(true)
   const [breakingNewsLoading, setBreakingNewsLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
@@ -53,10 +61,10 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
 
   const ITEMS_PER_PAGE = 10
 
-  // Enhanced breaking news fetch with comprehensive filtering
-  const fetchBreakingNews = React.useCallback(async () => {
+  // Enhanced breaking news alerts fetch with comprehensive filtering
+  const fetchBreakingNewsAlerts = React.useCallback(async () => {
     if (category !== "Today") {
-      setBreakingNews([])
+      setBreakingNewsAlerts([])
       setBreakingNewsLoading(false)
       return
     }
@@ -71,21 +79,40 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
         'deutsche welle', 'npr', 'pbs', 'abc news', 'cbs news', 'nbc news'
       ]
       
+      // Fetch breaking news alerts with joined breaking news data
       const { data, error } = await supabase
-        .from('breaking_news')
-        .select('*')
-        .eq('is_active', true)
-        .gt('expires_at', new Date().toISOString())
-        .gte('urgency_score', 60) // Only high urgency breaking news
-        .order('urgency_score', { ascending: false })
-        .order('detected_at', { ascending: false })
+        .from('breaking_news_alerts')
+        .select(`
+          *,
+          breaking_news!inner(
+            id,
+            title,
+            description,
+            article_url,
+            image_url,
+            source,
+            priority_level,
+            urgency_score,
+            published_date,
+            detected_at,
+            keywords,
+            is_active,
+            expires_at
+          )
+        `)
+        .eq('breaking_news.is_active', true)
+        .gt('breaking_news.expires_at', new Date().toISOString())
+        .gte('breaking_news.urgency_score', 60) // Only high urgency breaking news
+        .in('severity', ['critical', 'high']) // Only critical and high severity alerts
+        .order('sent_at', { ascending: false })
         .limit(50) // Fetch more to filter comprehensively
 
       if (error) throw error
 
       // Comprehensive filtering for top sources only
-      const filteredBreakingNews = (data || []).filter(item => {
-        const sourceLower = item.source.toLowerCase()
+      const filteredAlerts = (data || []).filter(alert => {
+        const breakingNews = alert.breaking_news
+        const sourceLower = breakingNews.source.toLowerCase()
         
         // Check if source is from tier 1 list
         const isTier1Source = tier1Sources.some(tier1Source => 
@@ -93,51 +120,70 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
         )
         
         // Additional quality checks
-        const hasGoodContent = item.title && item.title.length > 20 && 
-                              item.description && item.description.length > 50
+        const hasGoodContent = breakingNews.title && breakingNews.title.length > 20 && 
+                              breakingNews.description && breakingNews.description.length > 50
         
         // Check for breaking news keywords
-        const hasBreakingKeywords = item.keywords && item.keywords.length > 0 &&
-                                   item.keywords.some(keyword => 
+        const hasBreakingKeywords = breakingNews.keywords && breakingNews.keywords.length > 0 &&
+                                   breakingNews.keywords.some(keyword => 
                                      ['breaking', 'urgent', 'alert', 'developing'].includes(keyword.toLowerCase())
                                    )
         
-        return isTier1Source && hasGoodContent && (hasBreakingKeywords || item.urgency_score >= 75)
+        // Validate source with urgency score
+        const isValidSource = SourceRankingService.validateBreakingNewsSource(
+          breakingNews.source, 
+          breakingNews.urgency_score
+        )
+        
+        return isTier1Source && hasGoodContent && isValidSource && 
+               (hasBreakingKeywords || breakingNews.urgency_score >= 75)
       })
 
       // Enhanced sorting with multiple criteria
-      const sortedBreakingNews = filteredBreakingNews.sort((a, b) => {
-        // Primary: Priority level (critical > high > medium)
+      const sortedAlerts = filteredAlerts.sort((a, b) => {
+        const breakingNewsA = a.breaking_news
+        const breakingNewsB = b.breaking_news
+        
+        // Primary: Alert severity (critical > high)
+        const severityOrder = { critical: 100, high: 75, medium: 50, low: 25 }
+        const severityA = severityOrder[a.severity as keyof typeof severityOrder] || 0
+        const severityB = severityOrder[b.severity as keyof typeof severityOrder] || 0
+        
+        if (severityA !== severityB) {
+          return severityB - severityA
+        }
+        
+        // Secondary: Breaking news priority level
         const priorityOrder = { critical: 100, high: 75, medium: 50 }
-        const priorityA = priorityOrder[a.priority_level as keyof typeof priorityOrder] || 0
-        const priorityB = priorityOrder[b.priority_level as keyof typeof priorityOrder] || 0
+        const priorityA = priorityOrder[breakingNewsA.priority_level as keyof typeof priorityOrder] || 0
+        const priorityB = priorityOrder[breakingNewsB.priority_level as keyof typeof priorityOrder] || 0
         
         if (priorityA !== priorityB) {
           return priorityB - priorityA
         }
         
-        // Secondary: Urgency score
-        if (a.urgency_score !== b.urgency_score) {
-          return b.urgency_score - a.urgency_score
+        // Tertiary: Urgency score
+        if (breakingNewsA.urgency_score !== breakingNewsB.urgency_score) {
+          return breakingNewsB.urgency_score - breakingNewsA.urgency_score
         }
         
-        // Tertiary: Source credibility (tier 1 sources get priority)
-        const sourceScoreA = SourceRankingService.getSourcePriority(a.source).priority
-        const sourceScoreB = SourceRankingService.getSourcePriority(b.source).priority
+        // Quaternary: Source credibility
+        const sourceScoreA = SourceRankingService.getSourcePriority(breakingNewsA.source).priority
+        const sourceScoreB = SourceRankingService.getSourcePriority(breakingNewsB.source).priority
         
         if (sourceScoreA !== sourceScoreB) {
           return sourceScoreB - sourceScoreA
         }
         
-        // Final: Recency
-        return new Date(b.detected_at).getTime() - new Date(a.detected_at).getTime()
+        // Final: Alert recency
+        return new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime()
       })
 
-      // Limit to top 8 breaking news items
-      setBreakingNews(sortedBreakingNews.slice(0, 8))
+      // Limit to top 8 breaking news alerts
+      setBreakingNewsAlerts(sortedAlerts.slice(0, 8))
     } catch (err) {
-      console.error('Failed to fetch breaking news:', err)
-      setBreakingNews([])
+      console.error('Failed to fetch breaking news alerts:', err)
+      setBreakingNewsAlerts([])
     } finally {
       setBreakingNewsLoading(false)
     }
@@ -242,8 +288,8 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
     setArticles([])
     setHasMore(true)
     fetchArticles(0, true)
-    fetchBreakingNews()
-  }, [fetchArticles, fetchBreakingNews])
+    fetchBreakingNewsAlerts()
+  }, [fetchArticles, fetchBreakingNewsAlerts])
 
   // Load more when scrolling
   React.useEffect(() => {
@@ -259,8 +305,9 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
     }
   }, [inView, hasMore, loading, articles.length])
 
-  const handleArticleClick = (article: NewsArticle | BreakingNewsItem) => {
-    window.open(article.article_url, '_blank', 'noopener,noreferrer')
+  const handleArticleClick = (article: NewsArticle | BreakingNewsAlert) => {
+    const url = 'breaking_news' in article ? article.breaking_news.article_url : article.article_url
+    window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   const handlePreferenceChange = (articleId: string, isLiked: boolean) => {
@@ -308,7 +355,7 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
 
   return (
     <div className="space-y-6">
-      {/* Enhanced Breaking News Section - Only top-tier sources with comprehensive info */}
+      {/* Clean Breaking News Section - Only in Today tab */}
       {category === "Today" && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -316,12 +363,7 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
           transition={{ delay: 0.1 }}
           className="mb-6"
         >
-          <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-lg font-semibold text-foreground">Breaking News</h2>
-            <span className="text-xs bg-red-500/20 text-red-600 px-2 py-1 rounded-full font-medium">
-              Premium Sources • High Urgency
-            </span>
-          </div>
+          <h2 className="text-lg font-semibold mb-3 text-foreground">Breaking News</h2>
           
           {breakingNewsLoading ? (
             <div className="flex overflow-x-auto space-x-4 pb-2 scrollbar-hide">
@@ -331,74 +373,23 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
                 </div>
               ))}
             </div>
-          ) : breakingNews.length > 0 ? (
+          ) : breakingNewsAlerts.length > 0 ? (
             <div className="flex overflow-x-auto space-x-4 pb-2 scrollbar-hide">
-              {breakingNews.map((item) => {
-                const sourcePriority = SourceRankingService.getSourcePriority(item.source)
-                const isTopTier = sourcePriority.category === 'tier1'
+              {breakingNewsAlerts.map((alert) => {
+                const breakingNews = alert.breaking_news
                 
                 return (
                   <EnhancedNewsCard
-                    key={item.id}
-                    imageSrc={item.image_url}
-                    title={item.title}
-                    description={item.description}
-                    source={item.source}
-                    uploadTime={formatTimeAgo(item.detected_at)}
+                    key={alert.id}
+                    imageSrc={breakingNews.image_url}
+                    title={breakingNews.title}
+                    description={breakingNews.description}
+                    source={breakingNews.source}
+                    uploadTime={formatTimeAgo(alert.sent_at)}
                     showSuggestMore={true}
                     isBreakingNews={true}
-                    onClick={() => handleArticleClick(item)}
-                    className={`
-                      ${item.priority_level === 'critical' ? 'border-l-red-600 bg-red-500/5 ring-2 ring-red-500/30' : 
-                        item.priority_level === 'high' ? 'border-l-orange-500 bg-orange-500/5 ring-2 ring-orange-500/30' : 
-                        'border-l-yellow-500 bg-yellow-500/5 ring-1 ring-yellow-500/20'}
-                      ${isTopTier ? 'shadow-lg' : 'shadow-md'}
-                      hover:shadow-xl transition-all duration-300
-                    `}
-                  >
-                    {/* Enhanced source and priority indicators */}
-                    <div className="mb-3 space-y-2">
-                      {/* Source tier badge */}
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-600 border border-blue-500/30">
-                          {sourcePriority.category === 'tier1' ? '★ Premium' : 'Verified'} Source
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          Score: {sourcePriority.priority}
-                        </span>
-                      </div>
-                      
-                      {/* Priority and urgency indicators */}
-                      <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          item.priority_level === 'critical' ? 'bg-red-500/20 text-red-600 border border-red-500/30' :
-                          item.priority_level === 'high' ? 'bg-orange-500/20 text-orange-600 border border-orange-500/30' :
-                          'bg-yellow-500/20 text-yellow-600 border border-yellow-500/30'
-                        }`}>
-                          {item.priority_level.toUpperCase()}
-                        </span>
-                        <span className="text-xs bg-gray-500/20 text-gray-600 px-2 py-1 rounded-full">
-                          Urgency: {item.urgency_score}/100
-                        </span>
-                      </div>
-                      
-                      {/* Keywords display */}
-                      {item.keywords && item.keywords.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {item.keywords.slice(0, 3).map((keyword, index) => (
-                            <span key={index} className="text-xs bg-purple-500/20 text-purple-600 px-1.5 py-0.5 rounded">
-                              {keyword}
-                            </span>
-                          ))}
-                          {item.keywords.length > 3 && (
-                            <span className="text-xs text-muted-foreground">
-                              +{item.keywords.length - 3} more
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </EnhancedNewsCard>
+                    onClick={() => handleArticleClick(alert)}
+                  />
                 )
               })}
             </div>
@@ -406,8 +397,7 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
             <div className="text-center py-8 text-muted-foreground">
               <div className="flex flex-col items-center gap-2">
                 <AlertCircle className="h-8 w-8" />
-                <p>No high-priority breaking news from premium sources</p>
-                <p className="text-xs">Only showing urgent news from verified tier-1 sources</p>
+                <p>No breaking news alerts available</p>
               </div>
             </div>
           )}
