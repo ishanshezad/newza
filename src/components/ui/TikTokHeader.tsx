@@ -119,11 +119,11 @@ export function TikTokHeader({
     setLocalSearchValue(searchValue)
   }, [searchValue])
 
-  // Set initial scroll position for "Today" to be centered using the middle set
+  // Set initial scroll position for active category to be centered using the middle set
   React.useEffect(() => {
-    const todayIndex = categories.indexOf("Today");
-    if (todayIndex !== -1) {
-      const middleIndex = todayIndex + categories.length; // Use middle set
+    const activeCategoryIndex = categories.indexOf(activeCategory);
+    if (activeCategoryIndex !== -1) {
+      const middleIndex = activeCategoryIndex + categories.length; // Use middle set
       const categoryElement = categoryRefs.current[middleIndex];
       const containerElement = categoriesRef.current;
 
@@ -138,7 +138,7 @@ export function TikTokHeader({
         setScrollOffset(initialScrollOffset);
       }
     }
-  }, [categories]);
+  }, [categories, activeCategory]);
 
   const handleCategoryClick = (category: string) => {
     if (category !== activeCategory && !isTransitioning) {
