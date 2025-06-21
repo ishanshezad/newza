@@ -4,7 +4,6 @@ import * as React from "react"
 import { motion, MotionConfig } from "framer-motion"
 import { Search, ArrowLeft } from "lucide-react"
 import { cn } from "../../lib/utils"
-import { useDebounceCallback } from "../../hooks/useDebounceCallback"
 
 interface TikTokHeaderProps {
   categories?: string[]
@@ -25,78 +24,13 @@ export function TikTokHeader({
 }: TikTokHeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = React.useState(false)
   const [localSearchValue, setLocalSearchValue] = React.useState(searchValue)
-  const [scrollOffset, setScrollOffset] = React.useState(0)
-  const [isTransitioning, setIsTransitioning] = React.useState(false)
-  const [touchStart, setTouchStart] = React.useState<number | null>(null)
-  const [touchEnd, setTouchEnd] = React.useState<number | null>(null)
   const containerRef = React.useRef<HTMLDivElement>(null)
   const inputRef = React.useRef<HTMLInputElement>(null)
-  const categoriesRef = React.useRef<HTMLDivElement>(null)
-  const categoryRefs = React.useRef<(HTMLButtonElement | null)[]>([])
 
   const transition = {
     type: "spring",
     bounce: 0.1,
     duration: 0.3,
-  }
-
-  // Minimum swipe distance (in px)
-  const minSwipeDistance = 50
-
-  // Debounced category selection to prevent rapid transitions
-  const debouncedCategorySelect = useDebounceCallback((category: string) => {
-    if (!isTransitioning) {
-      setIsTransitioning(true)
-      onCategorySelect?.(category)
-      
-      // Reset transition state after animation completes
-      setTimeout(() => {
-        setIsTransitioning(false)
-      }, 400)
-    }
-  }, 150)
-
-  // Touch event handlers for swipe navigation
-  const onTouchStart = (e: React.TouchEvent) => {
-    if (isSearchOpen) return // Don't handle swipes when search is open
-    setTouchEnd(null) // otherwise the swipe is fired even with usual touch events
-    setTouchStart(e.targetTouches[0].clientX)
-  }
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    if (isSearchOpen) return
-    setTouchEnd(e.targetTouches[0].clientX)
-  }
-
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd || isSearchOpen) return
-    
-    const distance = touchStart - touchEnd
-    const isLeftSwipe = distance > minSwipeDistance
-    const isRightSwipe = distance < -minSwipeDistance
-
-    if (isLeftSwipe || isRightSwipe) {
-      const currentIndex = categories.indexOf(activeCategory)
-      let newIndex = currentIndex
-
-      if (isLeftSwipe && currentIndex < categories.length - 1) {
-        // Swipe left - go to next category
-        newIndex = currentIndex + 1
-      } else if (isRightSwipe && currentIndex > 0) {
-        // Swipe right - go to previous category
-        newIndex = currentIndex - 1
-      } else if (isLeftSwipe && currentIndex === categories.length - 1) {
-        // Wrap around to first category
-        newIndex = 0
-      } else if (isRightSwipe && currentIndex === 0) {
-        // Wrap around to last category
-        newIndex = categories.length - 1
-      }
-
-      if (newIndex !== currentIndex) {
-        handleCategoryClick(categories[newIndex])
-      }
-    }
   }
 
   React.useEffect(() => {
@@ -119,51 +53,8 @@ export function TikTokHeader({
     setLocalSearchValue(searchValue)
   }, [searchValue])
 
-  // Set initial scroll position for active category to be centered using the middle set
-  React.useEffect(() => {
-    const activeCategoryIndex = categories.indexOf(activeCategory);
-    if (activeCategoryIndex !== -1) {
-      const middleIndex = activeCategoryIndex + categories.length; // Use middle set
-      const categoryElement = categoryRefs.current[middleIndex];
-      const containerElement = categoriesRef.current;
-
-      if (categoryElement && containerElement) {
-        const containerWidth = containerElement.offsetWidth;
-        const categoryLeft = categoryElement.offsetLeft;
-        const categoryWidth = categoryElement.offsetWidth;
-        const containerCenter = containerWidth / 2;
-        const categoryCenter = categoryLeft + categoryWidth / 2;
-
-        const initialScrollOffset = containerCenter - categoryCenter;
-        setScrollOffset(initialScrollOffset);
-      }
-    }
-  }, [categories, activeCategory]);
-
   const handleCategoryClick = (category: string) => {
-    if (category !== activeCategory && !isTransitioning) {
-      // Find the middle occurrence of the category for circular navigation
-      const totalCategories = categories.length
-      const categoryIndex = categories.indexOf(category)
-      const middleIndex = categoryIndex + totalCategories // Use the middle set for positioning
-      const categoryElement = categoryRefs.current[middleIndex]
-      const containerElement = categoriesRef.current
-
-      if (categoryElement && containerElement) {
-        const containerWidth = containerElement.offsetWidth
-        const categoryLeft = categoryElement.offsetLeft
-        const categoryWidth = categoryElement.offsetWidth
-        const containerCenter = containerWidth / 2
-        const categoryCenter = categoryLeft + categoryWidth / 2
-
-        const newScrollOffset = containerCenter - categoryCenter
-        
-        // Smooth transition to new position
-        setScrollOffset(newScrollOffset)
-      }
-
-      debouncedCategorySelect(category)
-    }
+    onCategorySelect?.(category)
   }
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -179,12 +70,7 @@ export function TikTokHeader({
 
   return (
     <MotionConfig transition={transition}>
-      <div 
-        className="sticky top-0 z-50 bg-background"
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-      >
+      <div className="sticky top-0 z-50 bg-background">
         <div className="relative" ref={containerRef}>
           <motion.div
             className="flex items-center justify-between px-4 py-3"
@@ -200,58 +86,39 @@ export function TikTokHeader({
             <div className="w-10 flex-shrink-0"></div>
 
             {/* Center - Category Filters */}
-            <div className="flex-1 flex justify-start overflow-hidden">
-              <div
-                ref={categoriesRef}
-                className="flex items-center gap-2 overflow-x-hidden"
-              >
-                <motion.div
-                  className="flex items-center gap-2"
-                  animate={{ x: scrollOffset }}
-                  transition={{ 
-                    type: "spring", 
-                    damping: 25, 
-                    stiffness: 400,
-                    mass: 0.8,
-                    duration: 0.6
-                  }}
-                >
-                  {/* Render categories in a circular fashion - triple the array for seamless looping */}
-                  {categories.concat(categories, categories).map((category, index) => (
-                    <button
-                      key={`${category}-${index}`}
-                      ref={el => categoryRefs.current[index] = el}
-                      onClick={() => handleCategoryClick(category)}
-                      disabled={isTransitioning}
-                      className={cn(
-                        "relative px-4 py-2 text-sm font-medium whitespace-nowrap transition-all duration-300 ease-in-out",
-                        activeCategory === category
-                          ? "text-foreground"
-                          : "text-muted-foreground hover:text-foreground",
-                        isTransitioning && "opacity-70 cursor-not-allowed"
-                      )}
-                    >
-                      {category}
-                      {activeCategory === category && (
-                        <motion.div
-                          layoutId="activeCategory"
-                          className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground"
-                          transition={{ 
-                            type: "spring", 
-                            bounce: 0.2, 
-                            duration: 0.6,
-                            ease: "easeInOut"
-                          }}
-                        />
-                      )}
-                    </button>
-                  ))}
-                </motion.div>
+            <div className="flex-1 flex justify-center">
+              <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide max-w-[calc(100vw-120px)] scroll-smooth">
+                {categories.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => handleCategoryClick(category)}
+                    className={cn(
+                      "relative px-4 py-2 text-sm font-medium whitespace-nowrap transition-all duration-300 flex-shrink-0",
+                      activeCategory === category
+                        ? "text-foreground"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {category}
+                    {activeCategory === category && (
+                      <motion.div
+                        layoutId="activeCategory"
+                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground rounded-full"
+                        transition={{ 
+                          type: "spring", 
+                          bounce: 0.2, 
+                          duration: 0.6,
+                          ease: "easeInOut"
+                        }}
+                      />
+                    )}
+                  </button>
+                ))}
               </div>
             </div>
 
             {/* Right - Search Icon */}
-            <div className="flex items-center flex-shrink-0">
+            <div className="flex items-center">
               <button
                 onClick={() => setIsSearchOpen(true)}
                 className="p-2 rounded-full hover:bg-accent transition-colors"
@@ -282,7 +149,7 @@ export function TikTokHeader({
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
-
+              
               <form onSubmit={handleSearchSubmit} className="flex-1">
                 <input
                   ref={inputRef}
