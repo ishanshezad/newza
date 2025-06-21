@@ -1,10 +1,8 @@
 import * as React from "react"
-import { Clock } from "lucide-react"
-import { formatTimeAgo, truncateText } from "../lib/utils"
+import { formatTimeAgo } from "../lib/utils"
 import { TranslationIndicator } from "./TranslationIndicator"
 import { TranslationService } from "../lib/translationService"
 import { EnhancedNewsCard } from "./ui/EnhancedNewsCard"
-import { SourceRankingService } from "../lib/sourceRanking"
 import { UserPreferencesManager } from "../lib/userPreferences"
 import type { NewsArticle } from "../lib/supabase"
 
@@ -37,14 +35,13 @@ export function NewsCard({
   }
 
   const handleSuggestMoreClick = () => {
-    // Add to user preferences when sparkles is clicked
     UserPreferencesManager.addPreference(article)
     onPreferenceChange?.(article.id, true)
   }
 
-  // Use translated content if available
-  const displayTitle = TranslationService.getDisplayTitle(article)
-  const displayDescription = TranslationService.getDisplayDescription(article)
+  // Use translated content if available, otherwise fallback to original
+  const displayTitle = article.translatedTitle || article.title
+  const displayDescription = article.translatedDescription || article.description
 
   return (
     <EnhancedNewsCard
@@ -59,12 +56,14 @@ export function NewsCard({
       className="group"
       index={index}
     >
-      {/* Translation and Category Indicators */}
-      <TranslationIndicator 
-        article={article} 
-        showDetails={true}
-        className="mb-3"
-      />
+      {/* Translation indicator only if actually translated */}
+      {article.originalLanguage === 'bangla' && article.translatedTitle && (
+        <div className="mb-3">
+          <div className="flex items-center gap-1 bg-blue-500/20 text-blue-400 px-2 py-1 rounded-full text-xs font-medium">
+            <span>Translated from Bangla</span>
+          </div>
+        </div>
+      )}
     </EnhancedNewsCard>
   )
 }
