@@ -197,12 +197,7 @@ export function TikTokHeader({
             }}
           >
             {/* Left - Empty space for balance */}
-            <div className="w-10 flex-shrink-0">
-              {/* Swipe indicator */}
-              <div className="text-xs text-muted-foreground opacity-50">
-                ← →
-              </div>
-            </div>
+            <div className="w-10 flex-shrink-0"></div>
 
             {/* Center - Category Filters */}
             <div className="flex-1 flex justify-start overflow-hidden">
@@ -300,11 +295,6 @@ export function TikTokHeader({
               </form>
             </div>
           </motion.div>
-        </div>
-        
-        {/* Swipe instruction hint */}
-        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-xs text-muted-foreground opacity-30 pb-1">
-          Swipe to navigate
         </div>
       </div>
     </MotionConfig>
