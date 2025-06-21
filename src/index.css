@@ -159,7 +159,7 @@ img {
   animation: stickySlide 0.3s ease-out;
 }
 
-/* Category button hover effects */
+/* Category button hover effects with shimmer */
 .category-button {
   position: relative;
   overflow: hidden;
@@ -180,9 +180,10 @@ img {
   left: 100%;
 }
 
-/* Auto-slide smooth scrolling enhancement */
+/* Circular infinite scroll container */
 .auto-slide-container {
   scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
 }
 
 .auto-slide-item {
@@ -203,4 +204,54 @@ img {
 /* Active category glow effect */
 .active-category-glow {
   box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+/* Infinite scroll visual enhancements */
+.infinite-scroll-indicator {
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255, 255, 255, 0.1) 50%, 
+    transparent 100%
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Circular navigation visual cues */
+.circular-nav-fade {
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 10%,
+    black 90%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 10%,
+    black 90%,
+    transparent 100%
+  );
+}
+
+/* Enhanced category button states */
+.category-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Smooth scroll physics for circular navigation */
+.physics-scroll {
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+}
+
+.physics-scroll::-webkit-scrollbar {
+  display: none;
 }

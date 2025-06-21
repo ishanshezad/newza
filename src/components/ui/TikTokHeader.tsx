@@ -4,6 +4,7 @@ import * as React from "react"
 import { motion, MotionConfig } from "framer-motion"
 import { Search, ArrowLeft } from "lucide-react"
 import { cn } from "../../lib/utils"
+import { useDebounceCallback } from "../../hooks/useDebounceCallback"
 
 interface TikTokHeaderProps {
   categories?: string[]
@@ -25,16 +26,31 @@ export function TikTokHeader({
   const [isSearchOpen, setIsSearchOpen] = React.useState(false)
   const [localSearchValue, setLocalSearchValue] = React.useState(searchValue)
   const [isSticky, setIsSticky] = React.useState(false)
+  const [scrollOffset, setScrollOffset] = React.useState(0)
+  const [isTransitioning, setIsTransitioning] = React.useState(false)
   const containerRef = React.useRef<HTMLDivElement>(null)
   const inputRef = React.useRef<HTMLInputElement>(null)
-  const scrollContainerRef = React.useRef<HTMLDivElement>(null)
-  const categoryRefs = React.useRef<{ [key: string]: HTMLButtonElement | null }>({})
+  const categoriesRef = React.useRef<HTMLDivElement>(null)
+  const categoryRefs = React.useRef<(HTMLButtonElement | null)[]>([])
 
   const transition = {
     type: "spring",
     bounce: 0.1,
     duration: 0.3,
   }
+
+  // Debounced category selection to prevent rapid transitions
+  const debouncedCategorySelect = useDebounceCallback((category: string) => {
+    if (!isTransitioning) {
+      setIsTransitioning(true)
+      onCategorySelect?.(category)
+      
+      // Reset transition state after animation completes
+      setTimeout(() => {
+        setIsTransitioning(false)
+      }, 400)
+    }
+  }, 150)
 
   // Sticky header detection
   React.useEffect(() => {
@@ -67,30 +83,51 @@ export function TikTokHeader({
     setLocalSearchValue(searchValue)
   }, [searchValue])
 
-  // Auto-slide to center active category
+  // Set initial scroll position for "Today" to be centered using the middle set
   React.useEffect(() => {
-    if (activeCategory && scrollContainerRef.current && categoryRefs.current[activeCategory]) {
-      const container = scrollContainerRef.current
-      const activeButton = categoryRefs.current[activeCategory]
-      
-      if (activeButton) {
-        const containerRect = container.getBoundingClientRect()
-        const buttonRect = activeButton.getBoundingClientRect()
-        
-        const containerCenter = containerRect.width / 2
-        const buttonCenter = buttonRect.left - containerRect.left + buttonRect.width / 2
-        const scrollOffset = buttonCenter - containerCenter
-        
-        container.scrollTo({
-          left: container.scrollLeft + scrollOffset,
-          behavior: 'smooth'
-        })
+    const todayIndex = categories.indexOf("Today");
+    if (todayIndex !== -1) {
+      const middleIndex = todayIndex + categories.length; // Use middle set
+      const categoryElement = categoryRefs.current[middleIndex];
+      const containerElement = categoriesRef.current;
+
+      if (categoryElement && containerElement) {
+        const containerWidth = containerElement.offsetWidth;
+        const categoryLeft = categoryElement.offsetLeft;
+        const categoryWidth = categoryElement.offsetWidth;
+        const containerCenter = containerWidth / 2;
+        const categoryCenter = categoryLeft + categoryWidth / 2;
+
+        const initialScrollOffset = containerCenter - categoryCenter;
+        setScrollOffset(initialScrollOffset);
       }
     }
-  }, [activeCategory])
+  }, [categories]);
 
   const handleCategoryClick = (category: string) => {
-    onCategorySelect?.(category)
+    if (category !== activeCategory && !isTransitioning) {
+      // Find the middle occurrence of the category for circular navigation
+      const totalCategories = categories.length
+      const categoryIndex = categories.indexOf(category)
+      const middleIndex = categoryIndex + totalCategories // Use the middle set for positioning
+      const categoryElement = categoryRefs.current[middleIndex]
+      const containerElement = categoriesRef.current
+
+      if (categoryElement && containerElement) {
+        const containerWidth = containerElement.offsetWidth
+        const categoryLeft = categoryElement.offsetLeft
+        const categoryWidth = categoryElement.offsetWidth
+        const containerCenter = containerWidth / 2
+        const categoryCenter = categoryLeft + categoryWidth / 2
+
+        const newScrollOffset = containerCenter - categoryCenter
+        
+        // Smooth transition to new position
+        setScrollOffset(newScrollOffset)
+      }
+
+      debouncedCategorySelect(category)
+    }
   }
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -110,7 +147,7 @@ export function TikTokHeader({
         className={cn(
           "sticky top-0 z-50 transition-all duration-300",
           isSticky 
-            ? "bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm" 
+            ? "bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm sticky-backdrop" 
             : "bg-background"
         )}
         animate={{
@@ -146,58 +183,67 @@ export function TikTokHeader({
             {/* Left - Empty space for balance */}
             <div className="w-10 flex-shrink-0"></div>
 
-            {/* Center - Category Filters with Auto-slide */}
-            <div className="flex-1 flex justify-center">
-              <div 
-                ref={scrollContainerRef}
-                className="flex items-center gap-1 overflow-x-auto scrollbar-hide max-w-[calc(100vw-120px)] scroll-smooth"
-                style={{
-                  scrollbarWidth: 'none',
-                  msOverflowStyle: 'none',
-                }}
+            {/* Center - Category Filters with Circular Infinite Scroll */}
+            <div className="flex-1 flex justify-start overflow-hidden">
+              <div
+                ref={categoriesRef}
+                className="flex items-center gap-2 overflow-x-hidden auto-slide-container"
               >
-                {categories.map((category) => (
-                  <motion.button
-                    key={category}
-                    ref={(el) => {
-                      categoryRefs.current[category] = el
-                    }}
-                    onClick={() => handleCategoryClick(category)}
-                    className={cn(
-                      "relative px-4 py-2 text-sm font-medium whitespace-nowrap transition-all duration-300 flex-shrink-0 rounded-full",
-                      activeCategory === category
-                        ? "text-foreground bg-accent/50"
-                        : "text-muted-foreground hover:text-foreground hover:bg-accent/30"
-                    )}
-                    whileHover={{ 
-                      scale: 1.05,
-                      transition: { duration: 0.2 }
-                    }}
-                    whileTap={{ 
-                      scale: 0.95,
-                      transition: { duration: 0.1 }
-                    }}
-                  >
-                    {category}
-                    {activeCategory === category && (
-                      <motion.div
-                        layoutId="activeCategory"
-                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground rounded-full"
-                        transition={{ 
-                          type: "spring", 
-                          bounce: 0.2, 
-                          duration: 0.6,
-                          ease: "easeInOut"
-                        }}
-                      />
-                    )}
-                  </motion.button>
-                ))}
+                <motion.div
+                  className="flex items-center gap-2"
+                  animate={{ x: scrollOffset }}
+                  transition={{ 
+                    type: "spring", 
+                    damping: 25, 
+                    stiffness: 400,
+                    mass: 0.8,
+                    duration: 0.6
+                  }}
+                >
+                  {/* Render categories in a circular fashion - triple the array for seamless infinite looping */}
+                  {categories.concat(categories, categories).map((category, index) => (
+                    <motion.button
+                      key={`${category}-${index}`}
+                      ref={el => categoryRefs.current[index] = el}
+                      onClick={() => handleCategoryClick(category)}
+                      disabled={isTransitioning}
+                      className={cn(
+                        "relative px-4 py-2 text-sm font-medium whitespace-nowrap transition-all duration-300 ease-in-out flex-shrink-0 rounded-full category-button auto-slide-item category-transition",
+                        activeCategory === category
+                          ? "text-foreground bg-accent/50 active-category-glow"
+                          : "text-muted-foreground hover:text-foreground hover:bg-accent/30",
+                        isTransitioning && "opacity-70 cursor-not-allowed"
+                      )}
+                      whileHover={{ 
+                        scale: activeCategory === category ? 1.02 : 1.05,
+                        transition: { duration: 0.2 }
+                      }}
+                      whileTap={{ 
+                        scale: 0.95,
+                        transition: { duration: 0.1 }
+                      }}
+                    >
+                      {category}
+                      {activeCategory === category && (
+                        <motion.div
+                          layoutId="activeCategory"
+                          className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground rounded-full"
+                          transition={{ 
+                            type: "spring", 
+                            bounce: 0.2, 
+                            duration: 0.6,
+                            ease: "easeInOut"
+                          }}
+                        />
+                      )}
+                    </motion.button>
+                  ))}
+                </motion.div>
               </div>
             </div>
 
             {/* Right - Search Icon */}
-            <div className="flex items-center">
+            <div className="flex items-center flex-shrink-0">
               <motion.button
                 onClick={() => setIsSearchOpen(true)}
                 className="p-2 rounded-full hover:bg-accent transition-colors"
