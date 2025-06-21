@@ -27,6 +27,8 @@ export function TikTokHeader({
   const [localSearchValue, setLocalSearchValue] = React.useState(searchValue)
   const [scrollOffset, setScrollOffset] = React.useState(0)
   const [isTransitioning, setIsTransitioning] = React.useState(false)
+  const [touchStart, setTouchStart] = React.useState<number | null>(null)
+  const [touchEnd, setTouchEnd] = React.useState<number | null>(null)
   const containerRef = React.useRef<HTMLDivElement>(null)
   const inputRef = React.useRef<HTMLInputElement>(null)
   const categoriesRef = React.useRef<HTMLDivElement>(null)
@@ -37,6 +39,9 @@ export function TikTokHeader({
     bounce: 0.1,
     duration: 0.3,
   }
+
+  // Minimum swipe distance (in px)
+  const minSwipeDistance = 50
 
   // Debounced category selection to prevent rapid transitions
   const debouncedCategorySelect = useDebounceCallback((category: string) => {
@@ -50,6 +55,49 @@ export function TikTokHeader({
       }, 400)
     }
   }, 150)
+
+  // Touch event handlers for swipe navigation
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (isSearchOpen) return // Don't handle swipes when search is open
+    setTouchEnd(null) // otherwise the swipe is fired even with usual touch events
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (isSearchOpen) return
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd || isSearchOpen) return
+    
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > minSwipeDistance
+    const isRightSwipe = distance < -minSwipeDistance
+
+    if (isLeftSwipe || isRightSwipe) {
+      const currentIndex = categories.indexOf(activeCategory)
+      let newIndex = currentIndex
+
+      if (isLeftSwipe && currentIndex < categories.length - 1) {
+        // Swipe left - go to next category
+        newIndex = currentIndex + 1
+      } else if (isRightSwipe && currentIndex > 0) {
+        // Swipe right - go to previous category
+        newIndex = currentIndex - 1
+      } else if (isLeftSwipe && currentIndex === categories.length - 1) {
+        // Wrap around to first category
+        newIndex = 0
+      } else if (isRightSwipe && currentIndex === 0) {
+        // Wrap around to last category
+        newIndex = categories.length - 1
+      }
+
+      if (newIndex !== currentIndex) {
+        handleCategoryClick(categories[newIndex])
+      }
+    }
+  }
 
   React.useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -131,7 +179,12 @@ export function TikTokHeader({
 
   return (
     <MotionConfig transition={transition}>
-      <div className="sticky top-0 z-50 bg-background">
+      <div 
+        className="sticky top-0 z-50 bg-background"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
         <div className="relative" ref={containerRef}>
           <motion.div
             className="flex items-center justify-between px-4 py-3"
@@ -144,7 +197,12 @@ export function TikTokHeader({
             }}
           >
             {/* Left - Empty space for balance */}
-            <div className="w-10 flex-shrink-0"></div>
+            <div className="w-10 flex-shrink-0">
+              {/* Swipe indicator */}
+              <div className="text-xs text-muted-foreground opacity-50">
+                ← →
+              </div>
+            </div>
 
             {/* Center - Category Filters */}
             <div className="flex-1 flex justify-start overflow-hidden">
@@ -242,6 +300,11 @@ export function TikTokHeader({
               </form>
             </div>
           </motion.div>
+        </div>
+        
+        {/* Swipe instruction hint */}
+        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 text-xs text-muted-foreground opacity-30 pb-1">
+          Swipe to navigate
         </div>
       </div>
     </MotionConfig>

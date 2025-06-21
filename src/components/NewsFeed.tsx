@@ -34,6 +34,7 @@ interface BreakingNewsItem {
   urgency_score: number
   published_date: string
   detected_at: string
+  keywords: string[]
 }
 
 export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsFeedProps) {
@@ -52,7 +53,7 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
 
   const ITEMS_PER_PAGE = 10
 
-  // Fetch breaking news for "Today" category - only from top-tier sources
+  // Enhanced breaking news fetch with comprehensive filtering
   const fetchBreakingNews = React.useCallback(async () => {
     if (category !== "Today") {
       setBreakingNews([])
@@ -63,33 +64,51 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
     try {
       setBreakingNewsLoading(true)
       
-      // Get top-tier sources for filtering
-      const topTierSources = SourceRankingService.getTopPrioritySources()
+      // Define tier 1 sources for breaking news (most reputable)
+      const tier1Sources = [
+        'reuters', 'bbc', 'cnn', 'al jazeera', 'aljazeera', 'associated press', 'ap news',
+        'new york times', 'nytimes', 'the guardian', 'washington post', 'france24', 
+        'deutsche welle', 'npr', 'pbs', 'abc news', 'cbs news', 'nbc news'
+      ]
       
       const { data, error } = await supabase
         .from('breaking_news')
         .select('*')
         .eq('is_active', true)
         .gt('expires_at', new Date().toISOString())
+        .gte('urgency_score', 60) // Only high urgency breaking news
         .order('urgency_score', { ascending: false })
         .order('detected_at', { ascending: false })
-        .limit(20) // Fetch more to filter by source quality
+        .limit(50) // Fetch more to filter comprehensively
 
       if (error) throw error
 
-      // Filter to only include breaking news from top-tier sources
+      // Comprehensive filtering for top sources only
       const filteredBreakingNews = (data || []).filter(item => {
-        const sourcePriority = SourceRankingService.getSourcePriority(item.source)
-        return sourcePriority.category === 'tier1' || 
-               topTierSources.some(topSource => 
-                 item.source.toLowerCase().includes(topSource.toLowerCase())
-               )
+        const sourceLower = item.source.toLowerCase()
+        
+        // Check if source is from tier 1 list
+        const isTier1Source = tier1Sources.some(tier1Source => 
+          sourceLower.includes(tier1Source) || tier1Source.includes(sourceLower)
+        )
+        
+        // Additional quality checks
+        const hasGoodContent = item.title && item.title.length > 20 && 
+                              item.description && item.description.length > 50
+        
+        // Check for breaking news keywords
+        const hasBreakingKeywords = item.keywords && item.keywords.length > 0 &&
+                                   item.keywords.some(keyword => 
+                                     ['breaking', 'urgent', 'alert', 'developing'].includes(keyword.toLowerCase())
+                                   )
+        
+        return isTier1Source && hasGoodContent && (hasBreakingKeywords || item.urgency_score >= 75)
       })
 
-      // Sort by priority level and urgency score
+      // Enhanced sorting with multiple criteria
       const sortedBreakingNews = filteredBreakingNews.sort((a, b) => {
-        // Priority level order: critical > high > medium
-        const priorityOrder = { critical: 3, high: 2, medium: 1 }
+        // Primary: Priority level (critical > high > medium)
+        const priorityOrder = { critical: 100, high: 75, medium: 50 }
         const priorityA = priorityOrder[a.priority_level as keyof typeof priorityOrder] || 0
         const priorityB = priorityOrder[b.priority_level as keyof typeof priorityOrder] || 0
         
@@ -97,11 +116,25 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
           return priorityB - priorityA
         }
         
-        // Then by urgency score
-        return b.urgency_score - a.urgency_score
+        // Secondary: Urgency score
+        if (a.urgency_score !== b.urgency_score) {
+          return b.urgency_score - a.urgency_score
+        }
+        
+        // Tertiary: Source credibility (tier 1 sources get priority)
+        const sourceScoreA = SourceRankingService.getSourcePriority(a.source).priority
+        const sourceScoreB = SourceRankingService.getSourcePriority(b.source).priority
+        
+        if (sourceScoreA !== sourceScoreB) {
+          return sourceScoreB - sourceScoreA
+        }
+        
+        // Final: Recency
+        return new Date(b.detected_at).getTime() - new Date(a.detected_at).getTime()
       })
 
-      setBreakingNews(sortedBreakingNews.slice(0, 6)) // Limit to 6 top items
+      // Limit to top 8 breaking news items
+      setBreakingNews(sortedBreakingNews.slice(0, 8))
     } catch (err) {
       console.error('Failed to fetch breaking news:', err)
       setBreakingNews([])
@@ -275,7 +308,7 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
 
   return (
     <div className="space-y-6">
-      {/* Breaking News Section - Only show for "Today" category with top-tier sources */}
+      {/* Enhanced Breaking News Section - Only top-tier sources with comprehensive info */}
       {category === "Today" && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -286,7 +319,7 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
           <div className="flex items-center gap-2 mb-3">
             <h2 className="text-lg font-semibold text-foreground">Breaking News</h2>
             <span className="text-xs bg-red-500/20 text-red-600 px-2 py-1 rounded-full font-medium">
-              Top Sources Only
+              Premium Sources • High Urgency
             </span>
           </div>
           
@@ -316,30 +349,54 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
                     isBreakingNews={true}
                     onClick={() => handleArticleClick(item)}
                     className={`
-                      ${item.priority_level === 'critical' ? 'border-l-red-600 bg-red-500/5 ring-1 ring-red-500/20' : 
-                        item.priority_level === 'high' ? 'border-l-orange-500 bg-orange-500/5 ring-1 ring-orange-500/20' : 
+                      ${item.priority_level === 'critical' ? 'border-l-red-600 bg-red-500/5 ring-2 ring-red-500/30' : 
+                        item.priority_level === 'high' ? 'border-l-orange-500 bg-orange-500/5 ring-2 ring-orange-500/30' : 
                         'border-l-yellow-500 bg-yellow-500/5 ring-1 ring-yellow-500/20'}
-                      ${isTopTier ? 'shadow-md' : ''}
+                      ${isTopTier ? 'shadow-lg' : 'shadow-md'}
+                      hover:shadow-xl transition-all duration-300
                     `}
                   >
-                    {/* Source tier badge for top sources */}
-                    {isTopTier && (
-                      <div className="mb-2">
+                    {/* Enhanced source and priority indicators */}
+                    <div className="mb-3 space-y-2">
+                      {/* Source tier badge */}
+                      <div className="flex items-center gap-2">
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-600 border border-blue-500/30">
-                          Premium Source
+                          {sourcePriority.category === 'tier1' ? '★ Premium' : 'Verified'} Source
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          Score: {sourcePriority.priority}
                         </span>
                       </div>
-                    )}
-                    
-                    {/* Priority level indicator */}
-                    <div className="mb-2">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        item.priority_level === 'critical' ? 'bg-red-500/20 text-red-600 border border-red-500/30' :
-                        item.priority_level === 'high' ? 'bg-orange-500/20 text-orange-600 border border-orange-500/30' :
-                        'bg-yellow-500/20 text-yellow-600 border border-yellow-500/30'
-                      }`}>
-                        {item.priority_level.toUpperCase()} • Score: {item.urgency_score}
-                      </span>
+                      
+                      {/* Priority and urgency indicators */}
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          item.priority_level === 'critical' ? 'bg-red-500/20 text-red-600 border border-red-500/30' :
+                          item.priority_level === 'high' ? 'bg-orange-500/20 text-orange-600 border border-orange-500/30' :
+                          'bg-yellow-500/20 text-yellow-600 border border-yellow-500/30'
+                        }`}>
+                          {item.priority_level.toUpperCase()}
+                        </span>
+                        <span className="text-xs bg-gray-500/20 text-gray-600 px-2 py-1 rounded-full">
+                          Urgency: {item.urgency_score}/100
+                        </span>
+                      </div>
+                      
+                      {/* Keywords display */}
+                      {item.keywords && item.keywords.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {item.keywords.slice(0, 3).map((keyword, index) => (
+                            <span key={index} className="text-xs bg-purple-500/20 text-purple-600 px-1.5 py-0.5 rounded">
+                              {keyword}
+                            </span>
+                          ))}
+                          {item.keywords.length > 3 && (
+                            <span className="text-xs text-muted-foreground">
+                              +{item.keywords.length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </EnhancedNewsCard>
                 )
@@ -347,7 +404,11 @@ export function NewsFeed({ category = "Today", searchQuery = "", region }: NewsF
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              <p>No breaking news from top sources at the moment</p>
+              <div className="flex flex-col items-center gap-2">
+                <AlertCircle className="h-8 w-8" />
+                <p>No high-priority breaking news from premium sources</p>
+                <p className="text-xs">Only showing urgent news from verified tier-1 sources</p>
+              </div>
             </div>
           )}
         </motion.div>

@@ -5,7 +5,7 @@ export interface SourcePriority {
 }
 
 export class SourceRankingService {
-  // Tier 1: Premium international sources (highest priority) - Top reputable sources
+  // Tier 1: Premium international sources (highest priority) - Top reputable sources for breaking news
   private static readonly TIER1_SOURCES = [
     'reuters', 'bbc', 'cnn', 'al jazeera', 'aljazeera', 'associated press', 'ap news',
     'new york times', 'nytimes', 'the guardian', 'washington post', 'france24', 
@@ -132,12 +132,12 @@ export class SourceRankingService {
     }
   }
 
-  // New method to get top priority sources for fetching
+  // Enhanced method to get top priority sources for breaking news filtering
   static getTopPrioritySources(): string[] {
     return this.TIER1_SOURCES
   }
 
-  // Method to check if a source is a top priority source
+  // Enhanced method to check if a source is a top priority source
   static isTopPrioritySource(sourceName: string): boolean {
     const normalizedSource = sourceName.toLowerCase().trim()
     return this.TIER1_SOURCES.some(tier1Source => 
@@ -145,7 +145,7 @@ export class SourceRankingService {
     )
   }
 
-  // Enhanced priority calculation for news feeds
+  // Enhanced priority calculation for news feeds with breaking news emphasis
   static calculateFeedPriority(article: {
     source: string
     published_date: string
@@ -227,5 +227,23 @@ export class SourceRankingService {
       tier: priority.category,
       badge: isTopSource ? this.getSourceTierBadge(sourceName) : undefined
     }
+  }
+
+  // Enhanced method for breaking news source validation
+  static validateBreakingNewsSource(sourceName: string, urgencyScore: number): boolean {
+    const sourcePriority = this.getSourcePriority(sourceName)
+    
+    // Only tier 1 sources for critical breaking news
+    if (urgencyScore >= 80) {
+      return sourcePriority.category === 'tier1'
+    }
+    
+    // Tier 1 and 2 sources for high urgency
+    if (urgencyScore >= 60) {
+      return sourcePriority.category === 'tier1' || sourcePriority.category === 'tier2'
+    }
+    
+    // All sources for medium urgency
+    return true
   }
 }
