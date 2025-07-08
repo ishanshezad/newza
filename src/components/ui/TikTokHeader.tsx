@@ -4,6 +4,7 @@ import * as React from "react"
 import { motion, MotionConfig } from "framer-motion"
 import { Search, ArrowLeft } from "lucide-react"
 import { cn } from "../../lib/utils"
+import { useDebounceCallback } from "../../hooks/useDebounceCallback"
 
 interface TikTokHeaderProps {
   categories?: string[]
@@ -24,11 +25,14 @@ export function TikTokHeader({
 }: TikTokHeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = React.useState(false)
   const [localSearchValue, setLocalSearchValue] = React.useState(searchValue)
-  const [isSticky, setIsSticky] = React.useState(false)
+  const [scrollOffset, setScrollOffset] = React.useState(0)
+  const [isTransitioning, setIsTransitioning] = React.useState(false)
+  const [touchStart, setTouchStart] = React.useState<number | null>(null)
+  const [touchEnd, setTouchEnd] = React.useState<number | null>(null)
   const containerRef = React.useRef<HTMLDivElement>(null)
   const inputRef = React.useRef<HTMLInputElement>(null)
-  const scrollContainerRef = React.useRef<HTMLDivElement>(null)
-  const categoryRefs = React.useRef<{ [key: string]: HTMLButtonElement | null }>({})
+  const categoriesRef = React.useRef<HTMLDivElement>(null)
+  const categoryRefs = React.useRef<(HTMLButtonElement | null)[]>([])
 
   const transition = {
     type: "spring",
@@ -36,16 +40,64 @@ export function TikTokHeader({
     duration: 0.3,
   }
 
-  // Sticky header detection
-  React.useEffect(() => {
-    const handleScroll = () => {
-      const scrollY = window.scrollY
-      setIsSticky(scrollY > 10)
-    }
+  // Minimum swipe distance (in px)
+  const minSwipeDistance = 50
 
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+  // Debounced category selection to prevent rapid transitions
+  const debouncedCategorySelect = useDebounceCallback((category: string) => {
+    if (!isTransitioning) {
+      setIsTransitioning(true)
+      onCategorySelect?.(category)
+      
+      // Reset transition state after animation completes
+      setTimeout(() => {
+        setIsTransitioning(false)
+      }, 400)
+    }
+  }, 150)
+
+  // Touch event handlers for swipe navigation
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (isSearchOpen) return // Don't handle swipes when search is open
+    setTouchEnd(null) // otherwise the swipe is fired even with usual touch events
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (isSearchOpen) return
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd || isSearchOpen) return
+    
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > minSwipeDistance
+    const isRightSwipe = distance < -minSwipeDistance
+
+    if (isLeftSwipe || isRightSwipe) {
+      const currentIndex = categories.indexOf(activeCategory)
+      let newIndex = currentIndex
+
+      if (isLeftSwipe && currentIndex < categories.length - 1) {
+        // Swipe left - go to next category
+        newIndex = currentIndex + 1
+      } else if (isRightSwipe && currentIndex > 0) {
+        // Swipe right - go to previous category
+        newIndex = currentIndex - 1
+      } else if (isLeftSwipe && currentIndex === categories.length - 1) {
+        // Wrap around to first category
+        newIndex = 0
+      } else if (isRightSwipe && currentIndex === 0) {
+        // Wrap around to last category
+        newIndex = categories.length - 1
+      }
+
+      if (newIndex !== currentIndex) {
+        handleCategoryClick(categories[newIndex])
+      }
+    }
+  }
 
   React.useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -67,30 +119,51 @@ export function TikTokHeader({
     setLocalSearchValue(searchValue)
   }, [searchValue])
 
-  // Auto-slide to center active category
+  // Set initial scroll position for active category to be centered using the middle set
   React.useEffect(() => {
-    if (activeCategory && scrollContainerRef.current && categoryRefs.current[activeCategory]) {
-      const container = scrollContainerRef.current
-      const activeButton = categoryRefs.current[activeCategory]
-      
-      if (activeButton) {
-        const containerRect = container.getBoundingClientRect()
-        const buttonRect = activeButton.getBoundingClientRect()
-        
-        const containerCenter = containerRect.width / 2
-        const buttonCenter = buttonRect.left - containerRect.left + buttonRect.width / 2
-        const scrollOffset = buttonCenter - containerCenter
-        
-        container.scrollTo({
-          left: container.scrollLeft + scrollOffset,
-          behavior: 'smooth'
-        })
+    const activeCategoryIndex = categories.indexOf(activeCategory);
+    if (activeCategoryIndex !== -1) {
+      const middleIndex = activeCategoryIndex + categories.length; // Use middle set
+      const categoryElement = categoryRefs.current[middleIndex];
+      const containerElement = categoriesRef.current;
+
+      if (categoryElement && containerElement) {
+        const containerWidth = containerElement.offsetWidth;
+        const categoryLeft = categoryElement.offsetLeft;
+        const categoryWidth = categoryElement.offsetWidth;
+        const containerCenter = containerWidth / 2;
+        const categoryCenter = categoryLeft + categoryWidth / 2;
+
+        const initialScrollOffset = containerCenter - categoryCenter;
+        setScrollOffset(initialScrollOffset);
       }
     }
-  }, [activeCategory])
+  }, [categories, activeCategory]);
 
   const handleCategoryClick = (category: string) => {
-    onCategorySelect?.(category)
+    if (category !== activeCategory && !isTransitioning) {
+      // Find the middle occurrence of the category for circular navigation
+      const totalCategories = categories.length
+      const categoryIndex = categories.indexOf(category)
+      const middleIndex = categoryIndex + totalCategories // Use the middle set for positioning
+      const categoryElement = categoryRefs.current[middleIndex]
+      const containerElement = categoriesRef.current
+
+      if (categoryElement && containerElement) {
+        const containerWidth = containerElement.offsetWidth
+        const categoryLeft = categoryElement.offsetLeft
+        const categoryWidth = categoryElement.offsetWidth
+        const containerCenter = containerWidth / 2
+        const categoryCenter = categoryLeft + categoryWidth / 2
+
+        const newScrollOffset = containerCenter - categoryCenter
+        
+        // Smooth transition to new position
+        setScrollOffset(newScrollOffset)
+      }
+
+      debouncedCategorySelect(category)
+    }
   }
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -106,23 +179,11 @@ export function TikTokHeader({
 
   return (
     <MotionConfig transition={transition}>
-      <motion.div 
-        className={cn(
-          "sticky top-0 z-50 transition-all duration-300",
-          isSticky 
-            ? "bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm" 
-            : "bg-background"
-        )}
-        animate={{
-          y: isSticky ? 0 : 0,
-          scale: isSticky ? 0.98 : 1,
-        }}
-        transition={{
-          type: "spring",
-          stiffness: 400,
-          damping: 30,
-          duration: 0.3
-        }}
+      <div 
+        className="sticky top-0 z-50 bg-background"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
       >
         <div className="relative" ref={containerRef}>
           <motion.div
@@ -130,95 +191,80 @@ export function TikTokHeader({
             animate={{
               opacity: isSearchOpen ? 0 : 1,
               scale: isSearchOpen ? 0.95 : 1,
-              paddingTop: isSticky ? "0.5rem" : "0.75rem",
-              paddingBottom: isSticky ? "0.5rem" : "0.75rem",
             }}
             style={{
               pointerEvents: isSearchOpen ? "none" : "auto"
-            }}
-            transition={{
-              type: "spring",
-              stiffness: 400,
-              damping: 25,
-              duration: 0.2
             }}
           >
             {/* Left - Empty space for balance */}
             <div className="w-10 flex-shrink-0"></div>
 
-            {/* Center - Category Filters with Auto-slide */}
-            <div className="flex-1 flex justify-center">
-              <div 
-                ref={scrollContainerRef}
-                className="flex items-center gap-1 overflow-x-auto scrollbar-hide max-w-[calc(100vw-120px)] scroll-smooth"
-                style={{
-                  scrollbarWidth: 'none',
-                  msOverflowStyle: 'none',
-                }}
+            {/* Center - Category Filters */}
+            <div className="flex-1 flex justify-start overflow-hidden">
+              <div
+                ref={categoriesRef}
+                className="flex items-center gap-2 overflow-x-hidden"
               >
-                {categories.map((category) => (
-                  <motion.button
-                    key={category}
-                    ref={(el) => {
-                      categoryRefs.current[category] = el
-                    }}
-                    onClick={() => handleCategoryClick(category)}
-                    className={cn(
-                      "relative px-4 py-2 text-sm font-medium whitespace-nowrap transition-all duration-300 flex-shrink-0 rounded-full",
-                      activeCategory === category
-                        ? "text-foreground bg-accent/50"
-                        : "text-muted-foreground hover:text-foreground hover:bg-accent/30"
-                    )}
-                    whileHover={{ 
-                      scale: 1.05,
-                      transition: { duration: 0.2 }
-                    }}
-                    whileTap={{ 
-                      scale: 0.95,
-                      transition: { duration: 0.1 }
-                    }}
-                  >
-                    {category}
-                    {activeCategory === category && (
-                      <motion.div
-                        layoutId="activeCategory"
-                        className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground rounded-full"
-                        transition={{ 
-                          type: "spring", 
-                          bounce: 0.2, 
-                          duration: 0.6,
-                          ease: "easeInOut"
-                        }}
-                      />
-                    )}
-                  </motion.button>
-                ))}
+                <motion.div
+                  className="flex items-center gap-2"
+                  animate={{ x: scrollOffset }}
+                  transition={{ 
+                    type: "spring", 
+                    damping: 25, 
+                    stiffness: 400,
+                    mass: 0.8,
+                    duration: 0.6
+                  }}
+                >
+                  {/* Render categories in a circular fashion - triple the array for seamless looping */}
+                  {categories.concat(categories, categories).map((category, index) => (
+                    <button
+                      key={`${category}-${index}`}
+                      ref={el => categoryRefs.current[index] = el}
+                      onClick={() => handleCategoryClick(category)}
+                      disabled={isTransitioning}
+                      className={cn(
+                        "relative px-4 py-2 text-sm font-medium whitespace-nowrap transition-all duration-300 ease-in-out",
+                        activeCategory === category
+                          ? "text-foreground"
+                          : "text-muted-foreground hover:text-foreground",
+                        isTransitioning && "opacity-70 cursor-not-allowed"
+                      )}
+                    >
+                      {category}
+                      {activeCategory === category && (
+                        <motion.div
+                          layoutId="activeCategory"
+                          className="absolute bottom-0 left-0 right-0 h-0.5 bg-foreground"
+                          transition={{ 
+                            type: "spring", 
+                            bounce: 0.2, 
+                            duration: 0.6,
+                            ease: "easeInOut"
+                          }}
+                        />
+                      )}
+                    </button>
+                  ))}
+                </motion.div>
               </div>
             </div>
 
             {/* Right - Search Icon */}
-            <div className="flex items-center">
-              <motion.button
+            <div className="flex items-center flex-shrink-0">
+              <button
                 onClick={() => setIsSearchOpen(true)}
                 className="p-2 rounded-full hover:bg-accent transition-colors"
                 aria-label="Search"
-                whileHover={{ 
-                  scale: 1.1,
-                  transition: { duration: 0.2 }
-                }}
-                whileTap={{ 
-                  scale: 0.9,
-                  transition: { duration: 0.1 }
-                }}
               >
                 <Search className="h-5 w-5" />
-              </motion.button>
+              </button>
             </div>
           </motion.div>
 
           {/* Search Overlay */}
           <motion.div
-            className="absolute inset-0 bg-background/95 backdrop-blur-md"
+            className="absolute inset-0 bg-background"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{
               opacity: isSearchOpen ? 1 : 0,
@@ -229,58 +275,28 @@ export function TikTokHeader({
             }}
           >
             <div className="flex items-center px-4 py-3 gap-3">
-              <motion.button
+              <button
                 onClick={() => setIsSearchOpen(false)}
                 className="p-2 rounded-full hover:bg-accent transition-colors flex-shrink-0"
                 aria-label="Close search"
-                whileHover={{ 
-                  scale: 1.1,
-                  transition: { duration: 0.2 }
-                }}
-                whileTap={{ 
-                  scale: 0.9,
-                  transition: { duration: 0.1 }
-                }}
               >
                 <ArrowLeft className="h-5 w-5" />
-              </motion.button>
-              
+              </button>
+
               <form onSubmit={handleSearchSubmit} className="flex-1">
-                <motion.input
+                <input
                   ref={inputRef}
                   type="text"
                   value={localSearchValue}
                   onChange={handleSearchChange}
                   placeholder={placeholder}
                   className="w-full bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground text-base"
-                  initial={{ x: 20, opacity: 0 }}
-                  animate={{ 
-                    x: isSearchOpen ? 0 : 20, 
-                    opacity: isSearchOpen ? 1 : 0 
-                  }}
-                  transition={{ delay: isSearchOpen ? 0.1 : 0 }}
                 />
               </form>
             </div>
           </motion.div>
         </div>
-
-        {/* Sticky indicator line */}
-        <motion.div
-          className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent"
-          initial={{ scaleX: 0, opacity: 0 }}
-          animate={{ 
-            scaleX: isSticky ? 1 : 0, 
-            opacity: isSticky ? 1 : 0 
-          }}
-          transition={{
-            type: "spring",
-            stiffness: 400,
-            damping: 30,
-            duration: 0.3
-          }}
-        />
-      </motion.div>
+      </div>
     </MotionConfig>
   )
 }
